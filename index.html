@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>arTV</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script>
+
+      var art = [];
+      var timer;
+      var minutes = 60;  // <<== change this to however long you want to show each image
+
+
+      function loadArt () {
+        // show the basic image if there is no art in the directory
+        if ( art.length == 0 ) {
+          $('BODY').css('background-image', 'url("artv.jpg")');
+          return false;
+        }
+
+        // set the background image
+        $('#fader').fadeIn(1000,function () {
+          $('BODY').css('background-image','url(' + $('IMG#preload').attr('src') + ')');
+          preloadArt();
+          $('#fader').fadeOut(1000);
+        });
+      }
+
+      function preloadArt () {
+        // preload the next random image
+        var randomIndex = Math.floor(Math.random() * art.length);
+        $('IMG#preload').attr('src',"art/"+art[randomIndex]);
+      }
+
+      // when the document is loaded
+      $(document).ready(function() {
+        // get the available images
+        $.ajax({
+          url: 'api.php',
+          method: 'GET',
+          success: function(data) {
+            art = data;
+            preloadArt();
+            loadArt();
+            // set a timeout to pick another random image and dispay that
+            timer = setInterval(loadArt,1000*60*minutes);
+          }
+        });
+
+        // Change the art on keypress or click
+        $(document).keypress(function(event) {
+          loadArt();
+        });
+        $(document).click(function(event) {
+          loadArt();
+        });
+      });
+    </script>
+
+    <style>
+      BODY { margin: 0; padding: 0; background-color: #000; background-size: cover; background-repeat: no-repeat; background-attachment: fixed; background-position: center center; }
+      BODY DIV#fader { position: fixed; height: 100%; width: 100%; margin: 0; background: #111; }
+      BODY IMG#preload { display: none; height: 100px; width: 100px; }
+    </style>
+  </head>
+  <body>
+    <div id="fader"></div>
+    <img id="preload" src="artv.jpg" />
+  </body>
+</html>
