@@ -4,7 +4,7 @@ $directory = 'art';
 $files = scandir($directory); // Get file listing
 $temp = array();
 foreach ( $files as $file ) {
-  if ( $file == '.DS_Store' || is_dir($directory.'/'.$file) ) continue;
+  if ( $file == '.DS_Store' || is_dir($directory.'/'.$file) || substr($file,0,2) == '._' ) continue;
   $temp []= $file;
 }
 $files = $temp;
