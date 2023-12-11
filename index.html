@@ -29,6 +29,7 @@
         // preload the next random image
         var randomIndex = Math.floor(Math.random() * art.length);
         $('IMG#preload').attr('src',"art/"+art[randomIndex]);
+        console.log("Next image is "+$('IMG#preload').attr('src'));
       }
 
       // when the document is loaded
