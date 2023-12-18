@@ -10,48 +10,70 @@
   animation: falling 3s ease-in-out 0s infinite backwards;
   top: 0;
   width: 5vw; height: 5vw;
-  opacity: 1;
+  opacity: 0.8;
   transform-origin: 0 0;
   animation-delay: 0s;
   animation-duration: 5.3s;
-  animation-iteration-count: infinite;
+  a1nimation-iteration-count: infinite;
+  filter: blur(1vw);
 
-          /* Snowflakes are made with CSS linear gradients (https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Images/Using_CSS_gradients) */
-          background-image: linear-gradient(
-              180deg,
-              transparent 40%,
-              white 40% 60%,
-              transparent 60%
-            ),
-            linear-gradient(
-              90deg,
-              transparent 40%,
-              white 40% 60%,
-              transparent 60%
-            ),
-            linear-gradient(
-              45deg,
-              transparent 43%,
-              white 43% 57%,
-              transparent 57%
-            ),
-            linear-gradient(
-              135deg,
-              transparent 43%,
-              white 43% 57%,
-              transparent 57%
-            );
+  /* Snowflakes are made with CSS linear gradients (https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Images/Using_CSS_gradients) */
+  background-image: linear-gradient(
+      180deg,
+      transparent 40%,
+      white 40% 60%,
+      transparent 60%
+    ),
+    linear-gradient(
+      90deg,
+      transparent 40%,
+      white 40% 60%,
+      transparent 60%
+    ),
+    linear-gradient(
+      45deg,
+      transparent 43%,
+      white 43% 57%,
+      transparent 57%
+    ),
+    linear-gradient(
+      135deg,
+      transparent 43%,
+      white 43% 57%,
+      transparent 57%
+    );
 
-
-            overflow: hidden;
-
+    overflow: hidden;
 }
 
 @keyframes falling {
+  0% {
+    transform: translate(0, -5vw) rotate(0deg) scale(0.9, 0.9);
+  }
+  100% {
+    transform: translate(10vh, 100vh) rotate(360deg) scale(1.1, 1.1);
+  }
+}
+
+@keyframes falling-mid {
+  0% {
+    transform: translate(0, -5vw) rotate(0deg) scale(0.9, 0.9);
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(5vh, 75vh) rotate(360deg) scale(1.1, 1.1);
+    opacity: 0;
+  }
+}
+
+@keyframes falling-far {
   from {
     transform: translate(0, -5vw) rotate(0deg) scale(0.9, 0.9);
   }
   to {
-    transform: translate(30px, 100vh) rotate(360deg) scale(1.1, 1.1);
+    transform: translate(0, 50vh) rotate(360deg) scale(1.1, 1.1);
   }
 }
