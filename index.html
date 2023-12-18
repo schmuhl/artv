@@ -21,14 +21,7 @@
         // set the background image
         $('#fader').fadeIn(1000,function () {
           $('BODY').css('background-image','url(' + $('IMG#preload').attr('src') + ')');
-
-          // is there snow?
-          if ( $('BODY').css('background-image').search("-snow.") > -1 ) {
-            addSnow();
-          } else {
-            removeSnow();
-          }
-
+          checkForSnow();  // check to see if snow should be added
           preloadArt();
           $('#fader').fadeOut(1000);
         });

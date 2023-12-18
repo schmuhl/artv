@@ -1,4 +1,10 @@
-
+function checkForSnow () {
+  if ( $('BODY').css('background-image').search("-snow.") > -1 ) {
+    addSnow();
+  } else {
+    removeSnow();
+  }
+}
 
 
 function addSnow () {
