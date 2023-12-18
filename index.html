@@ -3,6 +3,7 @@
   <head>
     <title>arTV</title>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="snow.js"></script>
     <script>
 
       var art = [];
@@ -20,6 +21,14 @@
         // set the background image
         $('#fader').fadeIn(1000,function () {
           $('BODY').css('background-image','url(' + $('IMG#preload').attr('src') + ')');
+
+          // is there snow?
+          if ( $('BODY').css('background-image').search("-snow.") > -1 ) {
+            addSnow();
+          } else {
+            removeSnow();
+          }
+
           preloadArt();
           $('#fader').fadeOut(1000);
         });
@@ -54,24 +63,14 @@
         $(document).click(function(event) {
           loadArt();
         });
-
-        // add the snowflakes
-        for (i=0; i<150; i++) {
-          var size = Math.random()*4;
-          var css = 'width: '+size+'vw; height: '+size+'vw;';
-          css += ' opacity: '+Math.random()+';';
-          css += ' animation-duration: '+(35-size*3)+'s;';
-          css += ' animation-delay: '+((Math.random()*23))+'s; ';
-          css += ' left: '+Math.random()*100+'vw;';
-          $("#snow").append('<div class="flake" style="'+css+'"></div>');
-        }
       });
     </script>
 
     <link rel="stylesheet" href="snow.css" />
     <style>
       BODY { margin: 0; padding: 0; background-color: #000; background-size: cover; background-repeat: no-repeat; background-attachment: fixed; background-position: center center; }
-      BODY DIV#fader { position: fixed; height: 100%; width: 100%; margin: 0; background: #111; }
+      BODY DIV#snow { z-index: 10; }
+      BODY DIV#fader { position: fixed; height: 100%; width: 100%; margin: 0; background: #111; z-index: 100; }
       BODY IMG#preload { display: none; height: 100px; width: 100px; }
     </style>
 
