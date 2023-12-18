@@ -29,7 +29,7 @@
         // preload the next random image
         var randomIndex = Math.floor(Math.random() * art.length);
         $('IMG#preload').attr('src','art/'+encodeURIComponent(art[randomIndex]));
-        console.log("Next image is "+$('IMG#preload').attr('src'));
+        console.log("Current image is "+$('BODY').css('background-image')+". Next image is "+$('IMG#preload').attr('src'));
       }
 
       // when the document is loaded
@@ -54,17 +54,31 @@
         $(document).click(function(event) {
           loadArt();
         });
+
+        // add the snowflakes
+        for (i=0; i<150; i++) {
+          var size = Math.random()*4;
+          var css = 'width: '+size+'vw; height: '+size+'vw;';
+          css += ' opacity: '+Math.random()+';';
+          css += ' animation-duration: '+(35-size*3)+'s;';
+          css += ' animation-delay: '+((Math.random()*23))+'s; ';
+          css += ' left: '+Math.random()*100+'vw;';
+          $("#snow").append('<div class="flake" style="'+css+'"></div>');
+        }
       });
     </script>
 
+    <link rel="stylesheet" href="snow.css" />
     <style>
       BODY { margin: 0; padding: 0; background-color: #000; background-size: cover; background-repeat: no-repeat; background-attachment: fixed; background-position: center center; }
       BODY DIV#fader { position: fixed; height: 100%; width: 100%; margin: 0; background: #111; }
       BODY IMG#preload { display: none; height: 100px; width: 100px; }
     </style>
+
   </head>
   <body>
     <div id="fader"></div>
     <img id="preload" src="artv.jpg" />
+    <div id="snow"></div>
   </body>
 </html>
