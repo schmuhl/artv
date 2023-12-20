@@ -14,7 +14,7 @@ function addSnow () {
     var css = 'width: '+size+'vw; height: '+size+'vw;';
     //css += ' opacity: '+0.3+';';
     css += ' filter: blur('+Math.max(0,(size/8-0.05))+'vw);';
-    css += ' animation-duration: '+(50-(size*7))+'s;';
+    css += ' animation-duration: '+(53-(size*7))+'s;';
     //css += ' animation-duration: '+((Math.random()*5)+10)+'s;';
     css += ' animation-delay: '+((Math.random()*23))+'s; ';
     css += ' left: '+Math.random()*100+'vw;';
