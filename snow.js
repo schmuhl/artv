@@ -9,7 +9,7 @@ function checkForSnow () {
 
 function addSnow () {
   console.log("Adding snow!");
-  for (i=0; i<150; i++) {
+  for (i=0; i<130; i++) {
     var size = Math.max(0.3,Math.random()*4);
     var css = 'width: '+size+'vw; height: '+size+'vw;';
     //css += ' opacity: '+0.3+';';

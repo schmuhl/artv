@@ -7,5 +7,6 @@
  - Any files ending in "-snow" will automatically get a falling snow animation. (E.g. photo-snow.jpg)
 - Connect Raspberry Pi to your TV
 - Run a browser and open up the page (e.g. http://localhost/artv/)
+  - I've done this on my Raspberry Pi by adding the following to /etc/xdg/lxsession/LXDE-pi/autostart : @chromium-browser --start-fullscreen http://localhost/artv/ 
 - Set the browser to full screen
 - Enjoy!
