@@ -23,7 +23,7 @@ function getArt ( $directory ) {
   $temp = array();
   foreach ( $files as $file ) {
     if ( $file == '.DS_Store' || is_dir($directory.'/'.$file) || substr($file,0,2) == '._' ) continue;
-    $temp []= $file;
+    $temp []= $directory.'/'.$file;
   }
   //echo " found ".count($temp)." files.";
   return $temp;
