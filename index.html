@@ -30,7 +30,8 @@
       function preloadArt () {
         // preload the next random image
         var randomIndex = Math.floor(Math.random() * art.length);
-        $('IMG#preload').attr('src','art/'+encodeURIComponent(art[randomIndex]));
+        //$('IMG#preload').attr('src',encodeURIComponent(art[randomIndex]));  // does it need to be encoded?
+        $('IMG#preload').attr('src',(art[randomIndex]));
         console.log("Current image is "+$('BODY').css('background-image')+". Next image is "+$('IMG#preload').attr('src'));
       }
 
