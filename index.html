@@ -9,31 +9,40 @@
       var art = [];
       var timer;
       var minutes = 4*60;  // <<== change this to however long you want to show each image
+      var debug = false;
 
 
       function loadArt () {
-        // show the basic image if there is no art in the directory
-        if ( art.length == 0 ) {
-          $('BODY').css('background-image', 'url("artv.jpg")');
-          return false;
-        }
+        // TODO if the preload image has no source, use the default artv image
+        if (debug) console.log("----------\nSetting the (background) image to be what was preloaded: "+$('IMG#preload').attr('src'));
 
-        // set the background image
+        // set the background image to be what was preloaded
         $('#fader').fadeIn(1000,function () {
-          $('BODY').css('background-image','url(' + $('IMG#preload').attr('src') + ')');
+          $('BODY').css('background-image','url("' + $('IMG#preload').attr('src') + '")');
           checkForSnow();  // check to see if snow should be added
           preloadArt();
           $('#fader').fadeOut(1000);
         });
       }
 
+
       function preloadArt () {
+        // if no art is available, use the default ArTV image
+        if ( art.length == 0 ) {
+          if (debug) console.log("There was no art available, so I'm using the default instead.");
+          $('IMG#preload').attr('src',("artv.jpg"));
+          return;
+        }
+
         // preload the next random image
-        var randomIndex = Math.floor(Math.random() * art.length);
+        if (debug) console.log(art);
+        let randomIndex = Math.floor(Math.random() * art.length);
+        if (debug) console.log("There were "+art.length+" image options provided by the API and I picked number "+randomIndex+" which is: "+art[randomIndex]);
         //$('IMG#preload').attr('src',encodeURIComponent(art[randomIndex]));  // does it need to be encoded?
         $('IMG#preload').attr('src',(art[randomIndex]));
-        console.log("Current image is "+$('BODY').css('background-image')+". Next image is "+$('IMG#preload').attr('src'));
+        if (debug) console.log("The current (background) image is "+$('BODY').css('background-image')+". The next (preload) image is "+$('IMG#preload').attr('src'));
       }
+
 
       // when the document is loaded
       $(document).ready(function() {
@@ -42,22 +51,46 @@
           url: 'api.php',
           method: 'GET',
           success: function(data) {
-            art = data;
-            preloadArt();
+            if ( !Array.isArray(data) || data.length == 0 ) {
+              console.log("Welcome to ArTV! Please add images to the 'art' folder for display.");  // must be new install?
+            } else {
+              art = data;
+              setTimeout(loadArt,1000*7); // just show the logo for 5 seconds
+              timer = setInterval(loadArt,1000*60*minutes); // set a timeout to pick another random image and dispay that
+            }
             loadArt();
-            // set a timeout to pick another random image and dispay that
-            timer = setInterval(loadArt,1000*60*minutes);
+          },
+          error: function(data) {
+            console.log("Welcome to ArTV! There seems to be a problem with the API :( Can you take a look into that?");  // must be new install?
+            loadArt();
           }
         });
 
         // Change the art on keypress or click
-        $(document).keypress(function(event) {
-          loadArt();
+        $(document).keyup(function(event) {
+          if (debug) console.log("A key was pressed: "+event.which);
+
+          if ( event.which == 16 ) { // shift
+            // do nothing, likely just a force-refresh on the browser
+          } else if ( event.which == 68 ) { // Toggle debug "d"
+            if ( debug ) console.log("Toggling the display of debug information.");
+            if ( debug ) debug = false;
+            else debug = true;
+          } else if ( event.which == 80 ) {  // Toggle showing the preview "p"
+            if (debug) console.log("Toggling the display of the preview image.");
+            if ( $("IMG#preload").hasClass("show") ) $("IMG#preload").removeClass("show");
+            else $("IMG#preload").addClass("show");
+          } else {
+            loadArt();
+          }
         });
+
+        // change the art on mouse click
         $(document).click(function(event) {
           loadArt();
         });
       });
+
     </script>
 
     <link rel="stylesheet" href="snow.css" />
@@ -66,7 +99,8 @@
       BODY { margin: 0; padding: 0; background-color: #000; background-size: cover; background-repeat: no-repeat; background-attachment: fixed; background-position: center center; }
       BODY DIV#snow { z-index: 10; }
       BODY DIV#fader { position: fixed; height: 100%; width: 100%; margin: 0; background: #111; z-index: 100; }
-      BODY IMG#preload { display: none; height: 100px; width: 100px; }
+      BODY IMG#preload { display: none; }
+      BODY IMG#preload.show { display: block; position: fixed; top: 0; right: 0; width: 100px; border: 5px solid #ffffff; margin: 10px; box-shadow: 5px 5px 10px; }
     </style>
 
   </head>
