@@ -4,7 +4,8 @@
 $files = getArt('art');  // from the main folder, works for every day of the year
 $today = getdate();
 $files = array_merge($files,getArt('art/'.$today['mon']));  // monthly art
-$files = array_merge($files,getArt('art/'.$today['mon'].'/'.$today['mday']));  // daily art
+$today = getArt('art/'.$today['mon'].'/'.$today['mon'].'-'.$today['mday']);  // daily art
+if ( count($today) > 0 ) $files = $today;
 //print_r($files);
 
 // show the data
