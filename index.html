@@ -93,27 +93,30 @@
       }
 
 
+      loadConfiguration('art/config.json');
+
+
       // when the document is loaded
       $(document).ready(function() {
-        loadConfiguration('art/config.json');
 
         // start the rotation
         $('DIV#one IMG').fadeIn(2000);
         setTimeout(function (){
           rotate();
           rotationInterval = setInterval(rotate,rotationSpeed*60*1000);
+          
+          // show and update the clock
+          if ( showClock ) {
+            $("DIV#clock").fadeIn(1000);
+            clockInterval = setInterval(clockUpdate,300);
+            console.log("yep");
+          }
         },4000);
 
         // change the rotation on mouse click
         $(document).click(function(event) {
           rotate();
         });
-
-        // show and update the clock
-        if ( showClock ) {
-          $("DIV#clock").fadeIn(1000);
-          clockInterval = setInterval(clockUpdate,300);
-        }
 
         // Handle hotkeys
         $(document).keyup(function(event) {
