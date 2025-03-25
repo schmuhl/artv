@@ -1,5 +1,5 @@
 # arTV
-"Art TV" is a very simple slideshow script designed to be run on a Raspberry Pi connected to a big screen TV, turning your TV into a rotating art piece.
+Pronounced "Art TV", this a very simple slideshow script designed to be run on a Raspberry Pi connected to a big screen TV, turning your TV into a rotating art piece.
 
 - Place files in a web server directory on the Raspberry Pi
   - Requires PHP to get a listing of all the images
@@ -7,6 +7,101 @@
  - Any files ending in "-snow" will automatically get a falling snow animation. (E.g. photo-snow.jpg)
 - Connect Raspberry Pi to your TV
 - Run a browser and open up the page (e.g. http://localhost/artv/)
-  - I've done this on my Raspberry Pi by adding the following to /etc/xdg/lxsession/LXDE-pi/autostart : @chromium-browser --kiosk --app=http://localhost/artv/ 
-- Set the browser to full screen
 - Enjoy!
+
+
+## Installing on a Raspberry Pi
+The following instructions "worked for me" but should be helpful in getting things going for you. Please make sure you understand what these commands are doing before you run them.
+
+### Installing PHP and Apache
+```bash
+sudo apt update
+sudo apt upgrade -y
+sudo apt install apache2 -y
+sudo apt install php libapache2-mod-php php-cli php-json php-mbstring php-curl -y
+sudo systemctl restart apache2
+```
+
+### Deploying arTV
+Set the appropriate permissions and clone the repository.
+```bash
+sudo usermod -a -G www-data pi
+sudo chgrp -R www-data /var/www/html
+sudo find /var/www/html -type f -exec chmod 664 {} \;
+sudo find /var/www/html -type d -exec chmod 775 {} \;
+cd /var/www/html
+git clone https://github.com/schmuhl/artv.git # I had to log out and then log back in before I had the group access for this to work?
+mkdir /var/www/html/artv/art
+sudo chown -R pi:www-data /var/www/html/artv/art
+```
+
+
+### Start arTV on reboot
+Next we'll create a service that will run every time the computer reboots. Open up this new file and paste in the following.
+```bash
+sudo pico /etc/systemd/system/artv.service
+```
+
+> [Unit]
+> Description=arTV
+> After=graphical.target
+> Requires=graphical.target
+>
+> [Service]
+> User=pi
+> Environment=DISPLAY=:0
+> Environment=XAUTHORITY=/home/pi/.Xauthority
+> ExecStart=/usr/bin/chromium-browser --kiosk http://localhost/artv
+> Restart=on-failure
+> RestartSec=10
+>
+> [Install]
+> WantedBy=graphical.target
+
+Enable the service and get it started. You should see it in the status.
+```bash
+sudo systemctl enable artv.service
+sudo systemctl start artv.service
+sudo systemctl status artv.service
+```
+
+
+### Ensure that the screen stays on
+Make sure that the screen never blanks so it's always on, burning into the retinas of your viewers! We'll kick this off, but you'll need to use the UI to complete it.
+```bash
+sudo raspi-config
+```
+1. Navigate to Display Options.
+2. Look for an option related to Screen Blanking or Screen Saver.
+3. Select this option and choose No or Disable.
+4. Select Finish and you might be prompted to reboot.
+
+
+### Make a samba share
+With a file share into the art folder, it's easier to manage the photos that are shown. This is a security vulnerability, so please consider this hack carefully. It makes it easy, but it may not be appropriate.
+
+```bash
+sudo apt install samba samba-common-bin -y
+sudo pico /etc/samba/smb.conf
+```
+
+Paste the following settings at the end of the file. Save and exit.
+> [arTV]
+> comment = arTV images
+> path = /var/www/html/artv/art
+> browseable = yes
+> writable = yes
+> guest ok = no
+> read only = no
+> create mask = 0775
+> directory mask = 0775
+> force user = pi
+> force group = www-data
+
+Set the password for the "pi" samba user. This can be the same as the password for system, but see the security warning above.
+```bash
+sudo smbpasswd -a pi
+sudo systemctl restart smbd
+```
+
+Enjoy! Whatever images are placed in the art folder will be rotated through randomly. 

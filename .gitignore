@@ -1,2 +1,4 @@
 art/*
 .DS_Store
+
+/vendor/

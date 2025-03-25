@@ -10,6 +10,7 @@
       var timer;
       var minutes = 4*60;  // <<== change this to however long you want to show each image
       var debug = false;
+      var showTime = true;
 
 
       function loadArt () {
@@ -89,11 +90,30 @@
         $(document).click(function(event) {
           loadArt();
         });
+
+        if ( showTime ) {
+          $("DIV#clock").show();
+          setInterval(function(){
+            const now = new Date();
+            let hours = now.getHours();
+            let minutes = now.getMinutes();
+            minutes = minutes < 10 ? '0'+minutes : minutes;
+            let seconds = now.getSeconds();
+            seconds = seconds < 10 ? '0'+seconds : seconds;
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12;
+            $("DIV#clock").html(hours+':'+minutes+'<span class="ampm">'+ampm+'</span>');
+          },300);
+        }
       });
 
     </script>
 
     <link rel="stylesheet" href="snow.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@700&display=swap" rel="stylesheet">
     <style>
       HTML { cursor: none; }
       BODY { margin: 0; padding: 0; background-color: #000; background-size: cover; background-repeat: no-repeat; background-attachment: fixed; background-position: center center; }
@@ -101,6 +121,8 @@
       BODY DIV#fader { position: fixed; height: 100%; width: 100%; margin: 0; background: #111; z-index: 100; }
       BODY IMG#preload { display: none; }
       BODY IMG#preload.show { display: block; position: fixed; top: 0; right: 0; width: 100px; border: 5px solid #ffffff; margin: 10px; box-shadow: 5px 5px 10px; }
+      BODY DIV#clock { display: none; position: fixed; right: 1vw; bottom: 1vw; text-align: right; font-family: 'Oswald', sans-serif; font-size: 90px; line-height: 90px; font-weight: 700; color: rgba(255, 255, 255, 0.1); z-index: 200; height: 90px; overflow: hidden; }
+      BODY DIV#clock .ampm { font-size: 50px; }
     </style>
 
   </head>
@@ -108,5 +130,6 @@
     <div id="fader"></div>
     <img id="preload" src="artv.jpg" />
     <div id="snow"></div>
+    <div id="clock"></div>
   </body>
 </html>
