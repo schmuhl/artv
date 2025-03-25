@@ -49,21 +49,23 @@ Next we'll create a service that will run every time the computer reboots. Open 
 sudo pico /etc/systemd/system/artv.service
 ```
 
-> [Unit]
-> Description=arTV
-> After=graphical.target
-> Requires=graphical.target
->
-> [Service]
-> User=pi
-> Environment=DISPLAY=:0
-> Environment=XAUTHORITY=/home/pi/.Xauthority
-> ExecStart=/usr/bin/chromium-browser --kiosk http://localhost/artv
-> Restart=on-failure
-> RestartSec=10
->
-> [Install]
-> WantedBy=graphical.target
+```bash
+[Unit]
+Description=arTV
+After=graphical.target
+Requires=graphical.target
+
+[Service]
+User=pi
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/pi/.Xauthority
+ExecStart=/usr/bin/chromium-browser --kiosk http://localhost/artv
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=graphical.target
+```
 
 Enable the service and get it started. You should see it in the status.
 ```bash
@@ -93,17 +95,19 @@ sudo pico /etc/samba/smb.conf
 ```
 
 Paste the following settings at the end of the file. Save and exit.
-> [arTV]
-> comment = arTV images
-> path = /var/www/html/artv/art
-> browseable = yes
-> writable = yes
-> guest ok = no
-> read only = no
-> create mask = 0775
-> directory mask = 0775
-> force user = pi
-> force group = www-data
+```bash
+[arTV]
+comment = arTV images
+path = /var/www/html/artv/art
+browseable = yes
+writable = yes
+guest ok = no
+read only = no
+create mask = 0775
+directory mask = 0775
+force user = pi
+force group = www-data
+```
 
 Set the password for the "pi" samba user. This can be the same as the password for system, but see the security warning above.
 ```bash
