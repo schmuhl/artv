@@ -121,9 +121,9 @@ You can change some of the configuration with a simple JSON file located at "art
 {
   "debug" : false,
   "showClock" : true,
-  "rotationSpeed" : 240
+  "rotationSpeed" : 60
 }
 ```
-
+Note that rotation speed is in minutes. Also note that you can press "p" to toggle a preview of the next image, "d" to toggle debug, and "c" to toggle the clock manually.
 
 ### Enjoy!
