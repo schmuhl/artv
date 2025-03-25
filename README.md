@@ -35,6 +35,13 @@ mkdir /var/www/html/artv/art
 sudo chown -R pi:www-data /var/www/html/artv/art
 ```
 
+### Add your images
+The "art" folder holds all of the images that can be shown. Eligible images will be shown randomly for the configured duration based on the following options:
+- Images in the "art" folder will be shown randomly. This is the simplest approach.
+- Create folders for specific months: Images in these folders will only be shown randomly during those months. These folders look like "1" for January and "2" for February and so on.
+- Create folders for specific days: Images in these folders will only be shown on that specific day and will be the only images that show on that day. An example for Christmas would look like "12-25".
+- Images that end with "-snow" will automatically get a snow animation. For example "landscape-snow.jpg".
+
 
 ### Start arTV on reboot
 Next we'll create a service that will run every time the computer reboots. Open up this new file and paste in the following.
@@ -104,4 +111,15 @@ sudo smbpasswd -a pi
 sudo systemctl restart smbd
 ```
 
-Enjoy! Whatever images are placed in the art folder will be rotated through randomly. 
+### Configuration
+You can change some of the configuration with a simple JSON file located at "art/config.json". Here is an example of the available settings:
+```bash
+{
+  "debug" : false,
+  "showClock" : true,
+  "rotationSpeed" : 240
+}
+```
+
+
+### Enjoy!
