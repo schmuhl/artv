@@ -8,9 +8,42 @@
 
       var art = [];
       var timer;
-      var minutes = 4*60;  // <<== change this to however long you want to show each image
+      var rotationSpeed = 4*60;  // <<== change this to however long you want to show each image, in minutes
       var debug = false;
-      var showTime = true;
+      var showClock = true;
+      var clockInterval;
+
+
+      function loadConfiguration ( path ) {
+        // attempt to load configuration from a file
+        fetch('art/config.json')
+          .then(response => {
+            if (!response.ok) {
+              if (debug) console.log('Configuration: Additional configuration not available in "'+path+'".');
+            }
+            return response.json();
+          })
+          .then(data => {
+            for (const key in data) {
+              if (data.hasOwnProperty(key)) {
+                switch (key) {
+                  case 'debug':
+                  case 'showClock':
+                  case 'rotationSpeed':
+                    window[key]=data[key];
+                    if (debug) console.log("Configuration: "+key+" set to "+data[key]);
+                    break;
+                  default:
+                    if (debug) console.warn(`Configuration: Unrecognized '${key}' value found in configuration file and ignored.`);
+                    break;
+                }
+              }
+            }
+          })
+          .catch(error => {
+            console.warn('Configuration: Could not load configuration from "'+path+'".');
+          });
+      }
 
 
       function loadArt () {
@@ -45,8 +78,7 @@
       }
 
 
-      // when the document is loaded
-      $(document).ready(function() {
+      function loadImages () {
         // get the available images
         $.ajax({
           url: 'api.php',
@@ -57,55 +89,77 @@
             } else {
               art = data;
               setTimeout(loadArt,1000*7); // just show the logo for 5 seconds
-              timer = setInterval(loadArt,1000*60*minutes); // set a timeout to pick another random image and dispay that
+              timer = setInterval(loadArt,1000*60*rotationSpeed); // set a timeout to pick another random image and dispay that
             }
             loadArt();
           },
           error: function(data) {
-            console.log("Welcome to ArTV! There seems to be a problem with the API :( Can you take a look into that?");  // must be new install?
+            console.warn("Welcome to ArTV! There seems to be a problem with the API :( Can you take a look into that?");  // must be new install?
             loadArt();
           }
         });
+      }
 
-        // Change the art on keypress or click
-        $(document).keyup(function(event) {
-          if (debug) console.log("A key was pressed: "+event.which);
 
-          if ( event.which == 16 ) { // shift
-            // do nothing, likely just a force-refresh on the browser
-          } else if ( event.which == 68 ) { // Toggle debug "d"
-            if ( debug ) console.log("Toggling the display of debug information.");
-            if ( debug ) debug = false;
-            else debug = true;
-          } else if ( event.which == 80 ) {  // Toggle showing the preview "p"
-            if (debug) console.log("Toggling the display of the preview image.");
-            if ( $("IMG#preload").hasClass("show") ) $("IMG#preload").removeClass("show");
-            else $("IMG#preload").addClass("show");
-          } else {
-            loadArt();
-          }
-        });
+      function clockUpdate () {
+        // Update the clock with the latest time
+        const now = new Date();
+        let hours = now.getHours();
+        let minutes = now.getMinutes();
+        minutes = minutes < 10 ? '0'+minutes : minutes;
+        let seconds = now.getSeconds();
+        seconds = seconds < 10 ? '0'+seconds : seconds;
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        $("DIV#clock").html(hours+':'+minutes+'<span class="ampm">'+ampm+'</span>');
+      }
+
+
+      // when the document is loaded
+      $(document).ready(function() {
+        loadConfiguration('art/config.json');
+
+        loadImages();
 
         // change the art on mouse click
         $(document).click(function(event) {
           loadArt();
         });
 
-        if ( showTime ) {
+        // show and update the clock
+        if ( showClock ) {
           $("DIV#clock").show();
-          setInterval(function(){
-            const now = new Date();
-            let hours = now.getHours();
-            let minutes = now.getMinutes();
-            minutes = minutes < 10 ? '0'+minutes : minutes;
-            let seconds = now.getSeconds();
-            seconds = seconds < 10 ? '0'+seconds : seconds;
-            const ampm = hours >= 12 ? 'PM' : 'AM';
-            hours = hours % 12;
-            hours = hours ? hours : 12;
-            $("DIV#clock").html(hours+':'+minutes+'<span class="ampm">'+ampm+'</span>');
-          },300);
+          clockInterval = setInterval(clockUpdate,300);
         }
+
+        // Change the art on keypress or click
+        $(document).keyup(function(event) {
+          if (debug) console.log("A key was pressed: "+event.which);
+          if ( event.which == 16 ) { // shift
+            // do nothing, likely just a force-refresh on the browser
+          } else if ( event.which == 68 ) { // Toggle debug "d"
+            console.log("Toggling the display of debug information.");
+            if ( debug ) debug = false;
+            else debug = true;
+          } else if ( event.which == 80 ) {  // Toggle showing the preview "p"
+            console.log("Toggling the display of the preview image.");
+            if ( $("IMG#preload").hasClass("show") ) $("IMG#preload").removeClass("show");
+            else $("IMG#preload").addClass("show");
+          } else if ( event.which == 67 ) {  // Toggle showing the clock "c"
+            console.log("Toggling the display of the clock.");
+            if ( $('DIV#clock').is(':visible') ) {
+              $('DIV#clock').hide();
+              clearInterval(clockInterval);
+            } else {
+              $('DIV#clock').show();
+              clockInterval = setInterval(clockUpdate,300);
+            }
+          } else {
+            loadArt();
+          }
+        });
+
       });
 
     </script>
@@ -120,15 +174,14 @@
       BODY DIV#snow { z-index: 10; }
       BODY DIV#fader { position: fixed; height: 100%; width: 100%; margin: 0; background: #111; z-index: 100; }
       BODY IMG#preload { display: none; }
-      BODY IMG#preload.show { display: block; position: fixed; top: 0; right: 0; width: 100px; border: 5px solid #ffffff; margin: 10px; box-shadow: 5px 5px 10px; }
-      BODY DIV#clock { display: none; position: fixed; right: 1vw; bottom: 1vw; text-align: right; font-family: 'Oswald', sans-serif; font-size: 90px; line-height: 90px; font-weight: 700; color: rgba(255, 255, 255, 0.1); text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.1); z-index: 200; height: 90px; overflow: hidden; }
+      BODY IMG#preload.show { display: block; position: fixed; top: 0; right: 0; width: 100px; border: 5px solid #ffffff; margin: 1vw; box-shadow: 5px 5px 10px; }
+      BODY DIV#clock { display: none; position: fixed; right: 1vw; bottom: 1vw; text-align: right; font-family: 'Oswald', sans-serif; font-size: 90px; line-height: 90px; font-weight: 700; color: rgba(255, 255, 255, 0.3); -webkit-text-stroke: 1px rgba(0,0,0,0.3); z-index: 200; height: 90px; overflow: hidden; }
       BODY DIV#clock .ampm { font-size: 50px; }
     </style>
-
   </head>
   <body>
     <div id="fader"></div>
-    <img id="preload" src="artv.jpg" />
+    <img id="preload" src="artv.png" />
     <div id="snow"></div>
     <div id="clock"></div>
   </body>

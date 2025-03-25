@@ -2,7 +2,7 @@ function checkForSnow () {
   // images that have "-snow" in them will get a nice animation November-February
   const d = new Date();
   let month = d.getMonth();
-  if ( $('BODY').css('background-image').search("-snow.") > -1 && d >= 11 && d <=2 ) {
+  if ( $('BODY').css('background-image').search("-snow.") > -1 ) { //&& d >= 11 && d <=2 ) {
     addSnow();
   } else {
     removeSnow();

@@ -1,4 +1,7 @@
 art/*
+!art/
+!art/config.json
+
 .DS_Store
 
-/vendor/
+new/
