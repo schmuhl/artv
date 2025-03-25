@@ -1,6 +1,5 @@
 .DS_Store
 art/*
 !art/
-art/config.json
 
 new/
