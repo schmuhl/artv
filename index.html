@@ -8,9 +8,10 @@
 
       var art = [];
       var timer;
-      var rotationSpeed = 4*60;  // <<== change this to however long you want to show each image, in minutes
+      var rotationSpeed = 60;  // <<== change this to however long you want to show each image, in minutes
+      var rotationInterval;
       var debug = false;
-      var showClock = true;
+      var showClock = false;
       var clockInterval;
 
 
@@ -46,58 +47,34 @@
       }
 
 
-      function loadArt () {
-        // TODO if the preload image has no source, use the default artv image
-        if (debug) console.log("----------\nSetting the (background) image to be what was preloaded: "+$('IMG#preload').attr('src'));
-
-        // set the background image to be what was preloaded
-        $('#fader').fadeIn(1000,function () {
-          $('BODY').css('background-image','url("' + $('IMG#preload').attr('src') + '")');
-          checkForSnow();  // check to see if snow should be added
-          preloadArt();
-          $('#fader').fadeOut(1000);
-        });
-      }
-
-
-      function preloadArt () {
-        // if no art is available, use the default ArTV image
-        if ( art.length == 0 ) {
-          if (debug) console.log("There was no art available, so I'm using the default instead.");
-          $('IMG#preload').attr('src',("artv.jpg"));
-          return;
+      function rotate () {
+        if ( $('DIV#one').is(':visible') ) {
+          $('DIV#two').html('<img />');
+          $('DIV#two IMG').on('load',function() {
+            $('DIV#two').css('z-index',1);
+            $('DIV#one').css('z-index',2);
+            $('DIV#two').fadeIn();
+            setTimeout(function() {
+              $('DIV#one').fadeOut(1000);
+            },1000);
+          });
+          $('DIV#two IMG').attr('src','api.php?image&cachebuster='+Date.now().toString());
+        } else {
+          $('DIV#one').html('<img />');
+          $('DIV#one IMG').on('load',function() {
+            $('DIV#one').css('z-index',1);
+            $('DIV#two').css('z-index',2);
+            $('DIV#one').fadeIn();
+            setTimeout(function() {
+              $('DIV#two').fadeOut(1000);
+            },1000);
+          });
+          $('DIV#one IMG').attr('src','api.php?image&cachebuster='+Date.now().toString());
         }
 
-        // preload the next random image
-        if (debug) console.log(art);
-        let randomIndex = Math.floor(Math.random() * art.length);
-        if (debug) console.log("There were "+art.length+" image options provided by the API and I picked number "+randomIndex+" which is: "+art[randomIndex]);
-        //$('IMG#preload').attr('src',encodeURIComponent(art[randomIndex]));  // does it need to be encoded?
-        $('IMG#preload').attr('src',(art[randomIndex]));
-        if (debug) console.log("The current (background) image is "+$('BODY').css('background-image')+". The next (preload) image is "+$('IMG#preload').attr('src'));
-      }
-
-
-      function loadImages () {
-        // get the available images
-        $.ajax({
-          url: 'api.php',
-          method: 'GET',
-          success: function(data) {
-            if ( !Array.isArray(data) || data.length == 0 ) {
-              console.log("Welcome to ArTV! Please add images to the 'art' folder for display.");  // must be new install?
-            } else {
-              art = data;
-              setTimeout(loadArt,1000*7); // just show the logo for 5 seconds
-              timer = setInterval(loadArt,1000*60*rotationSpeed); // set a timeout to pick another random image and dispay that
-            }
-            loadArt();
-          },
-          error: function(data) {
-            console.warn("Welcome to ArTV! There seems to be a problem with the API :( Can you take a look into that?");  // must be new install?
-            loadArt();
-          }
-        });
+        /**
+        @todo You've ruined the snow! How can I tell if the image should have snow??
+        */
       }
 
 
@@ -120,20 +97,24 @@
       $(document).ready(function() {
         loadConfiguration('art/config.json');
 
-        loadImages();
+        // start the rotation
+        $('DIV#one IMG').fadeIn(2000);
+        setTimeout(function (){
+          rotationInterval = setInterval(rotate,rotationSpeed*60*1000);
+        },5000);
 
-        // change the art on mouse click
+        // change the rotation on mouse click
         $(document).click(function(event) {
-          loadArt();
+          rotate();
         });
 
         // show and update the clock
         if ( showClock ) {
-          $("DIV#clock").show();
+          $("DIV#clock").fadeIn(1000);
           clockInterval = setInterval(clockUpdate,300);
         }
 
-        // Change the art on keypress or click
+        // Handle hotkeys
         $(document).keyup(function(event) {
           if (debug) console.log("A key was pressed: "+event.which);
           if ( event.which == 16 ) { // shift
@@ -156,7 +137,7 @@
               clockInterval = setInterval(clockUpdate,300);
             }
           } else {
-            loadArt();
+            rotate();
           }
         });
 
@@ -171,6 +152,8 @@
     <style>
       HTML { cursor: none; }
       BODY { margin: 0; padding: 0; background-color: #000; background-size: cover; background-repeat: no-repeat; background-attachment: fixed; background-position: center center; }
+      BODY DIV.pane { display: block; position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; z-index: 1; }
+      BODY DIV.pane IMG { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
       BODY DIV#snow { z-index: 10; }
       BODY DIV#fader { position: fixed; height: 100%; width: 100%; margin: 0; background: #111; z-index: 100; }
       BODY IMG#preload { display: none; }
@@ -180,8 +163,8 @@
     </style>
   </head>
   <body>
-    <div id="fader"></div>
-    <img id="preload" src="artv.png" />
+    <div id="one" class="pane"><img src="artv.png" style="display: none;"/></div>
+    <div id="two" class="pane" style="display: none;"></div>
     <div id="snow"></div>
     <div id="clock"></div>
   </body>

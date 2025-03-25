@@ -8,6 +8,25 @@ $today = getArt('art/'.$today['mon'].'/'.$today['mon'].'-'.$today['mday']);  // 
 if ( count($today) > 0 ) $files = $today;
 //print_r($files);
 
+
+// if requested as an image, return the contents of a random image instead of a list of files
+if ( isset($_GET['image']) ) {
+  //print_r($files);
+  if ( count($files) > 0 ) $file = $files[array_rand($files)];
+  else $file = 'artv.jpg';
+  header("HTTP/1.1 200 OK");
+  header('Content-type: '.mime_content_type($file));
+  header('Content-Length: '.filesize($file));
+  header('X-Image-Filename: '.$file);
+  header('Cache-Control: no-cache, no-store, must-revalidate');
+  header('Pragma: no-cache'); // For older browsers (HTTP 1.0)
+  header('Expires: 0'); // For older browsers (HTTP 1.0)
+  echo file_get_contents($file);
+  exit();
+}
+
+
+
 // show the data
 header("HTTP/1.1 200 OK");
 header('Content-type: text/json');
