@@ -100,8 +100,9 @@
         // start the rotation
         $('DIV#one IMG').fadeIn(2000);
         setTimeout(function (){
+          rotate();
           rotationInterval = setInterval(rotate,rotationSpeed*60*1000);
-        },5000);
+        },4000);
 
         // change the rotation on mouse click
         $(document).click(function(event) {
