@@ -43,10 +43,10 @@ Share your Google Drive folder with the Service Account:
 require __DIR__ . '/vendor/autoload.php';
 
 // Replace with your service account key file path, folder ID, and download directory
-$SERVICE_ACCOUNT_FILE = './artv-452806-160279c8ff53.json'; /** @todo MOVE THIS TO SAFE PLACE! */
+$SERVICE_ACCOUNT_FILE = '/var/www/html/artv/googleDrive/artv-452806-160279c8ff53.json'; /** @todo MOVE THIS TO SAFE PLACE! */
 $FOLDER_ID = '1OMAP-oylVamd7B53P1SqP6Wggq9CbfC-';
-//$DOWNLOAD_DIR = '/var/www/html/artv/art/';
-$DOWNLOAD_DIR = '/Applications/MAMP/htdocs/artv/art/';
+$DOWNLOAD_DIR = '/var/www/html/artv/art/';
+//$DOWNLOAD_DIR = '/Applications/MAMP/htdocs/artv/art/';
 
 $client = new Google_Client();
 $client->setApplicationName('Drive Downloader');
