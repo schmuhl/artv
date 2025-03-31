@@ -46,8 +46,8 @@ function getArt ( $directory ) {
   $temp = array();
   foreach ( $files as $file ) {
     if ( $file == '.DS_Store' || is_dir($directory.'/'.$file) || substr($file,0,2) == '._' ) continue;
-    if ( !is_array(getimagesize($directory.'/'.$file)) ) continue;
-    if ( filesize($directory.'/'.$file) < 100000 ) continue;
+    //if ( !is_array(getimagesize($directory.'/'.$file)) ) continue;
+    //if ( filesize($directory.'/'.$file) < 100000 ) continue;
     $temp []= $directory.'/'.$file;
   }
   //echo " found ".count($temp)." files.";
