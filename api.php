@@ -6,7 +6,10 @@ $today = getdate();
 $files = array_merge($files,getArt('art/'.$today['mon']));  // monthly art
 $today = getArt('art/'.$today['mon'].'/'.$today['mon'].'-'.$today['mday']);  // daily art
 if ( count($today) > 0 ) $files = $today;
-//print_r($files);
+if ( isset($_GET['debug']) ) {
+  print_r($files);
+  exit();
+}
 
 
 // if requested as an image, return the contents of a random image instead of a list of files
