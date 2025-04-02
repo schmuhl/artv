@@ -42,26 +42,19 @@ if ( isset($config->GoogleDrive) && isset($config->GoogleDrive->enabled) && $con
         //print_r($files); die();
         //print_r(count($files)); die();
         $file = $files[rand(0,count($files)-1)];
-        print_r($file); die();
+        //print_r($file); die();
 
         $fileId = $file->id; //access id as an object property.
         $name = $file->getName();
+        $mimeType = $file->getMimeType();
 
         try {
           $response = $service->files->get($fileId, ['alt' => 'media']);
           $fileContent = $response->getBody()->getContents();
 
           if ($fileContent !== false) {
-
-            // try to determine the mime file type
-            $finfo = finfo_open(FILEINFO_MIME_TYPE);
-            if ( $finfo ) {
-              $mimeType = finfo_buffer($finfo, $fileContent);
-            } else $mimeType = null;
-            finfo_close($finfo);
-
             header("HTTP/1.1 200 OK");
-            if ( $mimeType ) header('Content-type: '.$mimeType);
+            if ( !empty($mimeType) ) header('Content-type: '.$mimeType);
             header('Content-Length: '.strlen($fileContent));
             header('X-Image-Filename: '.$name);
             header('Cache-Control: no-cache, no-store, must-revalidate');
