@@ -2,8 +2,6 @@
 art/*
 art/config.json
 !art/
-googleDrive/src
-googleDrive/vendor
-googleDrive/composer*
+googleDrive/
 
 new/

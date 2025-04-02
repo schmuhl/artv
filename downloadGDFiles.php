@@ -42,7 +42,7 @@ require __DIR__ . '/googleDrive/vendor/autoload.php';
 
 // Replace with your service account key file path, folder ID, and download directory
 //$SERVICE_ACCOUNT_FILE = '/var/www/html/artv/googleDrive/artv-452806-160279c8ff53.json'; /** @todo MOVE THIS TO SAFE PLACE! */
-$SERVICE_ACCOUNT_FILE = 'artv-452806-160279c8ff53.json';
+$SERVICE_ACCOUNT_FILE = 'googleDrive/artv-452806-ea9b100c6783.json';
 $FOLDER_ID = '1OMAP-oylVamd7B53P1SqP6Wggq9CbfC-';
 //$DOWNLOAD_DIR = '/var/www/html/artv/art/';
 $DOWNLOAD_DIR = 'art/';
