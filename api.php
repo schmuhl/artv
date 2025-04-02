@@ -8,11 +8,11 @@ if ( file_exists($configFile) ) {
   if ( $json !== false ) {
     $config = json_decode($json);
     if ( json_last_error() !== JSON_ERROR_NONE ) {
-      //echo "Configuration file is not valid JSON: $configFile ".json_last_error_msg();
+      error_log("Configuration file is not valid JSON: $configFile ".json_last_error_msg());
       //return;
     }
   } else {
-    //echo "Failed to read config file: $configFile";
+    error_log("Failed to read config file: $configFile");
     //return;
   }
   // process values
@@ -42,7 +42,7 @@ if ( isset($config->GoogleDrive) && isset($config->GoogleDrive->enabled) && $con
         //print_r($files); die();
         //print_r(count($files)); die();
         $file = $files[rand(0,count($files)-1)];
-        //print_r($file); die();
+        print_r($file); die();
 
         $fileId = $file->id; //access id as an object property.
         $name = $file->getName();
@@ -116,6 +116,13 @@ $today = getdate();
 $files = array_merge($files,getArt('art/'.$today['mon']));  // monthly art
 $today = getArt('art/'.$today['mon'].'/'.$today['mon'].'-'.$today['mday']);  // daily art
 if ( count($today) > 0 ) $files = $today;
+// only look at image files
+$files2 = $files;
+$files = array();
+foreach ( $files2 as $file ) {
+  $type = @mime_content_type($file);
+  if ( !empty($type) && in_array(substr($type,0,5),array('image')) ) $files []= $file;
+}
 if ( isset($_GET['debug']) ) {
   print_r($files);
   exit();
@@ -126,7 +133,7 @@ if ( isset($_GET['debug']) ) {
 if ( isset($_GET['image']) ) {
   //print_r($files);
   if ( count($files) > 0 ) $file = $files[array_rand($files)];
-  else $file = 'arTV.jpg';
+  else $file = 'arTV-error.jpg';
   header("HTTP/1.1 200 OK");
   header('Content-type: '.mime_content_type($file));
   header('Content-Length: '.filesize($file));
