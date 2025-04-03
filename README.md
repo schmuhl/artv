@@ -131,10 +131,17 @@ You can change some of the configuration with a simple JSON file located at "art
 {
   "debug" : false,
   "showClock" : true,
-  "rotationSpeed" : 60
+  "rotationSpeed" : 5,
+  "imageFit" : "contain",
+  "GoogleDrive" : {
+    "enabled" : true,
+    "serviceAccountFile" : "PATH TO FILE",
+    "folderID" : "GOOGLE DRIVE FOLDER ID FROM URL"
+  }
 }
 ```
-Note that rotation speed is in minutes. Also note that you can press "p" to toggle a preview of the next image, "d" to toggle debug, and "c" to toggle the clock manually.
+Note that rotation speed is in minutes and that the image fit setting can be either "contain" which will show the whole image, or "cover" which will zoom in on the image to ensure it covers the whole screen.
+Additionally, you can press "p" to toggle a preview of the next image, "d" to toggle debug, "f" to toggle the image fit, and "c" to toggle the clock manually.
 
 ### Enjoy!
 

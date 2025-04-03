@@ -10,6 +10,7 @@
       var timer;
       var rotationSpeed = 60;  // <<== change this to however long you want to show each image, in minutes
       var rotationInterval;
+      var imageFit = 'contain';
       var debug = false;
       var showClock = false;
       var clockInterval;
@@ -31,6 +32,8 @@
                   case 'debug':
                   case 'showClock':
                   case 'rotationSpeed':
+                  case 'imageFit':
+                  case 'GoogleDrive':
                     window[key]=data[key];
                     if (debug) console.log("Configuration: "+key+" set to "+data[key]);
                     break;
@@ -40,6 +43,7 @@
                 }
               }
             }
+            if ( imageFit!='contain' && imageFit!='cover' ) imageFit = 'contain'; // default is contain
           })
           .catch(error => {
             console.warn('Configuration: Could not load configuration from "'+path+'".');
@@ -49,29 +53,28 @@
 
       function rotate ( fadeTime = 1000 ) {
         if ( !Number.isFinite(fadeTime) ) fadeTime = 1000;
-        if ( $('DIV#one').is(':visible') ) {
-          $('DIV#two').html('<img />');
-          $('DIV#two IMG').on('load',function() {
-            $('DIV#two').css('z-index',1);
-            $('DIV#one').css('z-index',2);
-            $('DIV#two').fadeIn();
-            setTimeout(function() {
-              $('DIV#one').fadeOut(fadeTime);
-            },fadeTime);
-          });
-          $('DIV#two IMG').attr('src','api.php?image&cachebuster='+Date.now().toString());
-        } else {
-          $('DIV#one').html('<img />');
-          $('DIV#one IMG').on('load',function() {
-            $('DIV#one').css('z-index',1);
-            $('DIV#two').css('z-index',2);
-            $('DIV#one').fadeIn();
-            setTimeout(function() {
-              $('DIV#two').fadeOut(fadeTime);
-            },fadeTime);
-          });
-          $('DIV#one IMG').attr('src','api.php?image&cachebuster='+Date.now().toString());
+
+        var on='one';
+        var off='two';
+        if ( $('DIV#one').hasClass('active') ) {
+          on = 'two';
+          off = 'one';
         }
+
+        //console.log("showing "+on); // remove
+        $('DIV#'+on).css('z-index',1);  // put this in back
+        $('DIV#'+off).css('z-index',2);
+        $('DIV#'+on).html('<img class="'+imageFit+'"/>');  // add a new image
+        $('DIV#'+on+' IMG').attr('src','api.php?image&cachebuster='+Date.now().toString());
+        $('DIV#'+on+' IMG').on('load',function() {
+          //console.log('image loaded for '+on);
+          $('DIV#'+on).fadeIn(fadeTime); // show this, behind
+          $('DIV#'+on).addClass('active');
+          setTimeout(function() { // hide other, from front
+            $('DIV#'+off).fadeOut(fadeTime);
+            $('DIV#'+off).removeClass('active');
+          },0);
+        });
 
         /**
         @todo You've ruined the snow! How can I tell if the image should have snow??
@@ -109,7 +112,7 @@
           // show and update the clock
           if ( showClock ) {
             setTimeout(function(){ $("DIV#clock").fadeIn(1000); },400);
-            clockInterval = setInterval(clockUpdate,300);
+            clockInterval = setInterval(clockUpdate,30000);
           }
         },4000);
 
@@ -120,7 +123,6 @@
 
         // Handle hotkeys
         $(document).keyup(function(event) {
-          if (debug) console.log("A key was pressed: "+event.which);
           if ( event.which == 16 ) { // shift
             // do nothing, likely just a force-refresh on the browser
           } else if ( event.which == 68 ) { // Toggle debug "d"
@@ -138,9 +140,14 @@
               clearInterval(clockInterval);
             } else {
               $('DIV#clock').show();
-              clockInterval = setInterval(clockUpdate,300);
+              clockInterval = setInterval(clockUpdate,30000);
             }
+          } else if ( event.which == 70 ) {  // Toggle showing the image fit "f"
+            if ( imageFit == 'cover' ) imageFit = 'contain';
+            else imageFit = 'cover';
+            console.log('Toggling the image fit to: '+imageFit);
           } else {
+            if (debug) console.log("An unrecognized key was pressed: "+event.which);
             rotate(1);
           }
         });
@@ -157,7 +164,8 @@
       HTML { cursor: none; }
       BODY { margin: 0; padding: 0; background-color: #000; background-size: cover; background-repeat: no-repeat; background-attachment: fixed; background-position: center center; }
       BODY DIV.pane { display: block; position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; z-index: 1; }
-      BODY DIV.pane IMG { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+      BODY DIV.pane IMG.cover { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+      BODY DIV.pane IMG.contain { display: block; width: 100%; height: 100%; object-fit: scale-down; object-position: center; }
       BODY DIV#snow { z-index: 10; }
       BODY DIV#fader { position: fixed; height: 100%; width: 100%; margin: 0; background: #111; z-index: 100; }
       BODY IMG#preload { display: none; }
@@ -167,8 +175,8 @@
     </style>
   </head>
   <body>
-    <div id="one" class="pane"><img src="arTV.jpg" style="display: none;"/></div>
-    <div id="two" class="pane" style="display: none;"></div>
+    <div id="one" class="pane active"><img src="arTV.jpg" class="cover" style="dis1play: none;"/></div>
+    <div id="two" class="pane" style="displ1ay: none;"></div>
     <div id="snow"></div>
     <div id="clock"></div>
   </body>
