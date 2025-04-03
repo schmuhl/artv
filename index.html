@@ -47,7 +47,8 @@
       }
 
 
-      function rotate () {
+      function rotate ( fadeTime = 1000 ) {
+        if ( !Number.isFinite(fadeTime) ) fadeTime = 1000;
         if ( $('DIV#one').is(':visible') ) {
           $('DIV#two').html('<img />');
           $('DIV#two IMG').on('load',function() {
@@ -55,8 +56,8 @@
             $('DIV#one').css('z-index',2);
             $('DIV#two').fadeIn();
             setTimeout(function() {
-              $('DIV#one').fadeOut(1000);
-            },1000);
+              $('DIV#one').fadeOut(fadeTime);
+            },fadeTime);
           });
           $('DIV#two IMG').attr('src','api.php?image&cachebuster='+Date.now().toString());
         } else {
@@ -66,8 +67,8 @@
             $('DIV#two').css('z-index',2);
             $('DIV#one').fadeIn();
             setTimeout(function() {
-              $('DIV#two').fadeOut(1000);
-            },1000);
+              $('DIV#two').fadeOut(fadeTime);
+            },fadeTime);
           });
           $('DIV#one IMG').attr('src','api.php?image&cachebuster='+Date.now().toString());
         }
@@ -107,15 +108,14 @@
 
           // show and update the clock
           if ( showClock ) {
-            $("DIV#clock").fadeIn(1000);
+            setTimeout(function(){ $("DIV#clock").fadeIn(1000); },400);
             clockInterval = setInterval(clockUpdate,300);
-            console.log("yep");
           }
         },4000);
 
         // change the rotation on mouse click
         $(document).click(function(event) {
-          rotate();
+          rotate(1);
         });
 
         // Handle hotkeys
@@ -141,7 +141,7 @@
               clockInterval = setInterval(clockUpdate,300);
             }
           } else {
-            rotate();
+            rotate(1);
           }
         });
 
@@ -163,7 +163,7 @@
       BODY IMG#preload { display: none; }
       BODY IMG#preload.show { display: block; position: fixed; top: 0; right: 0; width: 100px; border: 5px solid #ffffff; margin: 1vw; box-shadow: 5px 5px 10px; }
       BODY DIV#clock { display: none; position: fixed; right: 1vw; bottom: 1vw; text-align: right; font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 8vh; line-height: 8vh; height: 10vh; vertical-align: bottom; color: rgba(255, 255, 255, 0.3); -webkit-text-stroke: 1px rgba(0,0,0,0.3); z-index: 200; overflow: hidden; }
-      BODY DIV#clock .ampm { font-size: 50px; }
+      BODY DIV#clock .ampm { font-size: 5vh; }
     </style>
   </head>
   <body>
