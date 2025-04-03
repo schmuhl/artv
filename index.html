@@ -54,6 +54,7 @@
       function rotate ( fadeTime = 1000 ) {
         if ( !Number.isFinite(fadeTime) ) fadeTime = 1000;
 
+        // toggle which one is new
         var on='one';
         var off='two';
         if ( $('DIV#one').hasClass('active') ) {
@@ -183,8 +184,8 @@
     </style>
   </head>
   <body>
-    <div id="one" class="pane active"><img src="arTV.jpg" class="cover" style="dis1play: none;"/></div>
-    <div id="two" class="pane" style="displ1ay: none;"></div>
+    <div id="one" class="pane active"><img src="arTV.jpg" class="cover" style="display: none;"/></div>
+    <div id="two" class="pane" style="display: none;"></div>
     <div id="snow"></div>
     <div id="clock"></div>
   </body>
