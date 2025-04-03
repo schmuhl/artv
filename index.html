@@ -143,8 +143,16 @@
               clockInterval = setInterval(clockUpdate,30000);
             }
           } else if ( event.which == 70 ) {  // Toggle showing the image fit "f"
-            if ( imageFit == 'cover' ) imageFit = 'contain';
-            else imageFit = 'cover';
+            if ( imageFit == 'cover' ) {
+              imageFit = 'contain';
+              $('DIV.pane IMG').removeClass('cover');
+              $('DIV.pane IMG').addClass(imageFit);
+            } else {
+              imageFit = 'cover';
+              $('DIV.pane IMG').removeClass('contain');
+              $('DIV.pane IMG').addClass(imageFit);
+            }
+
             console.log('Toggling the image fit to: '+imageFit);
           } else {
             if (debug) console.log("An unrecognized key was pressed: "+event.which);
