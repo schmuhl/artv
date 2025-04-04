@@ -100,6 +100,7 @@ sudo raspi-config
 With a file share into the art folder, it's easier to manage the photos that are shown. This is a security vulnerability, so please consider this hack carefully. It makes it easy, but it may not be appropriate.
 
 ```bash
+sudo hostnamectl set-hostname artv
 sudo apt install samba samba-common-bin -y
 sudo pico /etc/samba/smb.conf
 ```
@@ -127,14 +128,14 @@ sudo systemctl restart smbd
 
 ### Configuration
 You can change some of the configuration with a simple JSON file located at "art/config.json". Here is an example of the available settings:
-```bash
+```json
 {
   "debug" : false,
   "showClock" : true,
-  "rotationSpeed" : 5,
+  "rotationSpeed" : 60,
   "imageFit" : "contain",
   "GoogleDrive" : {
-    "enabled" : true,
+    "enabled" : false,
     "serviceAccountFile" : "PATH TO FILE",
     "folderID" : "GOOGLE DRIVE FOLDER ID FROM URL"
   }
@@ -147,12 +148,10 @@ Additionally, you can press "p" to toggle a preview of the next image, "d" to to
 
 
 ## Instructions for managing the photos
-1. Open \\192.168.1.175\html by either typing it in after clicking on the Windows start button, or by typing that in one of your file explorer windows.
+1. Open \\192.168.1.175\artv by either typing it in after clicking on the Windows start button, or by typing that in one of your file explorer windows.
 
-2. You'll be prompted for a username (pi) and password (raspberry)
+2. You'll be prompted for a username (pi) and password (??)
 
-3. If that opens, you should see some files. Navigate to the "artv" and then the "art" folder. Inside that "art" folder should be several images. These are the images that are being served up to the monitors, in random order. Feel free to experiment with new, fewer, or different images in there.
+3. If that opens, you should see some files. Inside that "art" folder should be several images. These are the images that are being served up to the monitor, in random order. Feel free to experiment with new, fewer, or different images in there.
 
-4. You can test it on your own computer by opening a web browser to http://192.168.1.175 clicking anywhere on the image will advance it to the next one. Again, it's random but it should allow you to test out new images before the monitors eventually get to the new images.
-
-OK, maybe that's a lot. Feel free to call me and I can help you out.
+4. You can test it on your own computer by opening a web browser to http://artv/artv . Clicking anywhere on the image will advance it to the next one. Again, it's random but it should allow you to test out new images before the monitors eventually get to the new images.
