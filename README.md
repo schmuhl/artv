@@ -154,4 +154,4 @@ Additionally, you can press "p" to toggle a preview of the next image, "d" to to
 
 3. If that opens, you should see some files. Inside that "art" folder should be several images. These are the images that are being served up to the monitor, in random order. Feel free to experiment with new, fewer, or different images in there.
 
-4. You can test it on your own computer by opening a web browser to http://artv . Clicking anywhere on the image will advance it to the next one. Again, it's random but it should allow you to test out new images before the monitors eventually get to the new images.
+4. You can test it on your own computer by opening a web browser to http://artv/artv . Clicking anywhere on the image will advance it to the next one. Again, it's random but it should allow you to test out new images before the monitors eventually get to the new images.
