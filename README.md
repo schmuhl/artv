@@ -100,6 +100,7 @@ sudo raspi-config
 With a file share into the art folder, it's easier to manage the photos that are shown. This is a security vulnerability, so please consider this hack carefully. It makes it easy, but it may not be appropriate.
 
 ```bash
+sudo hostnamectl set-hostname artv
 sudo apt install samba samba-common-bin -y
 sudo pico /etc/samba/smb.conf
 ```
