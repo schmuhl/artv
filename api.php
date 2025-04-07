@@ -114,7 +114,7 @@ $files2 = $files;
 $files = array();
 foreach ( $files2 as $file ) {
   $type = @mime_content_type($file);
-  if ( !empty($type) && in_array(substr($type,0,5),array('image')) ) $files []= $file;
+  if ( !empty($type) && in_array(substr($type,0,5),array('image','video')) ) $files []= $file;
 }
 if ( isset($_GET['debug']) ) {
   print_r($files);
