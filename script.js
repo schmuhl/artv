@@ -1,10 +1,10 @@
-var art = [];
+var art = [];  // no longer used
 var timer;
-var rotationSpeed = 60;  // <<== change this to however long you want to show each image, in minutes
+var rotationSpeed = 60;  // default rotation speed, in minutes
 var rotationInterval;
-var imageFit = 'contain';
+var imageFit = 'contain';  // default image fit (contain shows entire image, cover fills the screen)
 var debug = false;
-var showClock = false;
+var showClock = false;  // default for clock visibility
 var clockInterval;
 
 
@@ -55,7 +55,7 @@ function rotate ( fadeTime = 1000 ) {
     off = 'one';
   }
 
-  const mediaUrl = 'api.php?image&cachebuster='+Date.now().toString();
+  const mediaUrl = 'api.php?cachebuster='+Date.now().toString();
   $.ajax({
     url: mediaUrl,
     method: 'GET',
@@ -65,16 +65,16 @@ function rotate ( fadeTime = 1000 ) {
     success: function(data, status, xhr) {
       if (status === 'success') {
         const contentType = xhr.getResponseHeader('Content-Type');
-        //console.log("Successfully pulled the media: "+contentType);
+        if ( debug ) console.log("Successfully pulled the media: "+contentType);
 
-        //console.log("showing "+on); // remove
+        if ( debug ) console.log("showing "+on); // remove
         $('DIV#'+on).css('z-index',1);  // put this in back
         $('DIV#'+off).css('z-index',2);
 
         if ( contentType && contentType.startsWith('image/') ) {
           $('DIV#'+on).html('<img class="'+imageFit+'" src="'+URL.createObjectURL(data)+'" />');
           $('DIV#'+on+' IMG').on('load',function() {
-            //console.log('image loaded for '+on);
+            if ( debug ) console.log('image loaded for '+on);
             $('DIV#'+on).fadeIn(fadeTime); // show this, behind
             $('DIV#'+on).addClass('active');
             $('DIV#'+off).fadeOut(fadeTime); // hide other, from front
@@ -84,7 +84,7 @@ function rotate ( fadeTime = 1000 ) {
         } else if ( contentType && contentType.startsWith('video/') ) {
           $('DIV#'+on).html('<video muted loop src="'+URL.createObjectURL(data)+'"></video>');
           $('DIV#'+on+' VIDEO').on('loadeddata',function() {
-            //console.log('video loaded for '+on);
+            if ( debug ) console.log('video loaded for '+on);
             $('DIV#'+on).fadeIn(fadeTime); // show this, behind
             $('DIV#'+on).addClass('active');
             $('DIV#'+off).fadeOut(fadeTime);
@@ -101,7 +101,19 @@ function rotate ( fadeTime = 1000 ) {
       }
     },
     error: function(xhr, status, error) {
-      console.error("Error fetching data:", status, error);
+      console.error("ERROR fetching data:", status, error);
+    },
+    complete: function(jqXHR, textStatus) {
+      /*
+      console.log('--- All Response Headers ---');
+      console.log(jqXHR.getAllResponseHeaders());
+      var headers = jqXHR.getAllResponseHeaders().split('\n');
+      for (var i = 0; i < headers.length; i++) {
+        var header = headers[i].trim();
+        if (header) {
+          console.log(header);
+        }
+      }*/
     }
   });
 

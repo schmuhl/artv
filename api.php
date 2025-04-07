@@ -9,15 +9,31 @@ if ( file_exists($configFile) ) {
     $config = json_decode($json);
     if ( json_last_error() !== JSON_ERROR_NONE ) {
       error_log("Configuration file is not valid JSON: $configFile ".json_last_error_msg());
-      //return;
     }
   } else {
     error_log("Failed to read config file: $configFile");
-    //return;
   }
   // process values
   //print_r($config);
+  //$debug = $config->debug;
+  $debug = ( isset($_GET['debug']) ) ? true : false;
+  $cache = '/tmp/artv-cache';
+  $cacheLength = 30;  // in seconds
 }
+
+
+/* pull from the cache, if recent
+if ( file_exists($cache) ) {
+  if ( time()-filemtime($cache) <= $cacheLength ) {
+    if ( $debug ) echo "Using cached file. ";
+    else outputFile($cache);
+  } else {
+    if ( $debug ) echo "Not using cached file. ";
+  }
+} else {
+  if ( $debug ) echo "There is no cached file. ";
+}
+*/
 
 
 // PULL FROM GOOGLE DRIVE
@@ -33,14 +49,19 @@ if ( isset($config->GoogleDrive) && isset($config->GoogleDrive->enabled) && $con
     $service = new Google_Service_Drive($client);
     try {
       $results = $service->files->listFiles([
-          'q' => "'".$config->GoogleDrive->folderID."' in parents and mimeType contains 'image/'", // Filter for images
+          'q' => "'".$config->GoogleDrive->folderID."' in parents and ( mimeType contains 'image/' or mimeType contains 'video/' )", // Filter for images and videos
           'fields' => 'files(id, name, mimeType)',
       ]);
       $files = $results->getFiles();
+      if ( $debug ) {  // show the list of eligible files
+        header("HTTP/1.1 200 OK");
+        header('Content-type: text/json');
+        echo json_encode(array_values($files)); // Encode the file listing as JSON
+        exit();
+      }
 
       if ( count($files) > 0 ) {
-        //print_r($files); die();
-        //print_r(count($files)); die();
+        //print_r($files); print_r(count($files)); die();
         $file = $files[rand(0,count($files)-1)];
         //print_r($file); die();
 
@@ -48,10 +69,10 @@ if ( isset($config->GoogleDrive) && isset($config->GoogleDrive->enabled) && $con
         $name = $file->getName();
         $mimeType = $file->getMimeType();
 
+        /*
         try {
-          $response = $service->files->get($fileId, ['alt' => 'media']);
+          $response = $service->files->get($fileId, ['alt' => 'media']);  // grab the whole file
           $fileContent = $response->getBody()->getContents();
-
           if ($fileContent !== false) {
             header("HTTP/1.1 200 OK");
             if ( !empty($mimeType) ) header('Content-type: '.$mimeType);
@@ -64,24 +85,51 @@ if ( isset($config->GoogleDrive) && isset($config->GoogleDrive->enabled) && $con
             exit();
           } else {  // could not get the contents of the file
             error_log("Error downloading file from google Drive ($name) Could not get file contents.");
-            //echo "Error downloading $name.\n"; die();
-            //exit(1);
           }
         } catch (Exception $e) {  // some kind of exception was fired, e.g. it's a google doc, not an actual file
           error_log("Error downloading file from Google Drive ($name) " . $e->getMessage());
-          //echo "Error downloading file from Google Drive ($name) " . $e->getMessage(); die();
         }
+        */
+
+
+        try {
+          $response = $service->files->get($fileId, ['alt' => 'media']);
+          //$response = $request->execute(); // Execute the request to get the Guzzle response
+
+          if ($response->getStatusCode() == 200) {
+            header("HTTP/1.1 200 OK");
+            if (!empty($mimeType)) header('Content-type: ' . $mimeType);
+              header('Content-Length: ' . $response->getHeaderLine('Content-Length')); // Get content length from response
+              header('X-Image-Filename: ' . $name);
+              header('Cache-Control: no-cache, no-store, must-revalidate');
+              header('Pragma: no-cache');
+              header('Expires: 0');
+
+              // Stream the response body directly to the output
+              fpassthru($response->getBody()->detach());
+              exit();
+            } else {
+              header("HTTP/1.1 " . $response->getStatusCode());
+              echo json_encode(['error' => 'Failed to download file.', 'status_code' => $response->getStatusCode()]);
+              exit();
+            }
+        } catch (Google_Service_Exception $e) {
+            error_log('Error downloading file: ' . $e->getMessage());
+            header("HTTP/1.1 500 Internal Server Error");
+            echo json_encode(['error' => 'Failed to download file.']);
+            exit();
+        }
+
+
+
       } else {  // no files were in the google drive folder
-        echo "No files found in specified Google Drive."; die();
-        //exit(1);
+        error_log("No files found in specified Google Drive.");
       }
     } catch (Exception $e) {  // exception fired on getting drive folder items
       error_log("Error getting items from Google Drive folder " . $e->getMessage());
-      //echo "Error getting items from Google Drive folder " . $e->getMessage(); die();
     }
   } else {  // couldn't find service file
-    echo "Could not open Google Drive API service file."; die();
-    //exit(1);
+    error_log("Could not open Google Drive API service file.");
   }
 
   // Something went wrong. Show the error message.
@@ -116,17 +164,29 @@ foreach ( $files2 as $file ) {
   $type = @mime_content_type($file);
   if ( !empty($type) && in_array(substr($type,0,5),array('image','video')) ) $files []= $file;
 }
-if ( isset($_GET['debug']) ) {
-  print_r($files);
+
+// if requested as a list, show the data
+if ( $debug ) {
+  header("HTTP/1.1 200 OK");
+  header('Content-type: text/json');
+  echo json_encode(array_values($files)); // Encode the file listing as JSON
   exit();
 }
 
 
-// if requested as an image, return the contents of a random image instead of a list of files
-if ( isset($_GET['image']) ) {
-  //print_r($files);
-  if ( count($files) > 0 ) $file = $files[array_rand($files)];
-  else $file = 'arTV-error.jpg';
+
+// return the contents of a random image
+//print_r($files);
+if ( count($files) > 0 ) $file = $files[array_rand($files,1)];
+else $file = 'arTV-error.jpg';
+outputFile($file);
+
+
+
+
+
+
+function outputFile ( $file ) {
   header("HTTP/1.1 200 OK");
   header('Content-type: '.mime_content_type($file));
   header('Content-Length: '.filesize($file));
@@ -134,18 +194,24 @@ if ( isset($_GET['image']) ) {
   header('Cache-Control: no-cache, no-store, must-revalidate');
   header('Pragma: no-cache'); // For older browsers (HTTP 1.0)
   header('Expires: 0'); // For older browsers (HTTP 1.0)
-  echo file_get_contents($file);
+  //echo file_get_contents($file);  // performance: must load entire file into memory. Not good.
+  $handle = fopen($file, "rb");
+  if ($handle === false ) {
+    header("HTTP/1.1 500 Internal Server Error");
+    echo "Error: Could not open file '$filePath'.";
+    exit();
+  }
+  while (!feof($handle)) {
+      $buffer = fread($handle, 8192); // Read in 8KB chunks (adjust as needed)
+      if ($buffer !== false) {
+          echo $buffer;
+      } else {
+          break;
+      }
+  }
+  fclose($handle);
   exit();
 }
-
-
-
-// show the data
-header("HTTP/1.1 200 OK");
-header('Content-type: text/json');
-echo json_encode(array_values($files)); // Encode the file listing as JSON
-exit();
-
 
 
 // Look at a path and return all the images
