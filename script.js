@@ -17,7 +17,7 @@ function loadConfiguration ( path ) {
       }
       return response.json();
     })
-    .then(data => {
+    .then(data => {  // process the json for global config variables
       for (const key in data) {
         if (data.hasOwnProperty(key)) {
           switch (key) {
@@ -55,6 +55,7 @@ function rotate ( fadeTime = 1000 ) {
     off = 'one';
   }
 
+  // get the media to show next
   const mediaUrl = 'api.php?cachebuster='+Date.now().toString();
   $.ajax({
     url: mediaUrl,
@@ -71,7 +72,7 @@ function rotate ( fadeTime = 1000 ) {
         $('DIV#'+on).css('z-index',1);  // put this in back
         $('DIV#'+off).css('z-index',2);
 
-        if ( contentType && contentType.startsWith('image/') ) {
+        if ( contentType && contentType.startsWith('image/') ) {  // handle an image
           $('DIV#'+on).html('<img class="'+imageFit+'" src="'+URL.createObjectURL(data)+'" />');
           $('DIV#'+on+' IMG').on('load',function() {
             if ( debug ) console.log('image loaded for '+on);
@@ -81,7 +82,7 @@ function rotate ( fadeTime = 1000 ) {
             setTimeout(function(){ $('DIV#'+off+' VIDEO').trigger('pause'); },fadeTime); // stop playing the video, if present
             $('DIV#'+off).removeClass('active');
           });
-        } else if ( contentType && contentType.startsWith('video/') ) {
+        } else if ( contentType && contentType.startsWith('video/') ) {  // handle a video
           $('DIV#'+on).html('<video muted loop src="'+URL.createObjectURL(data)+'"></video>');
           $('DIV#'+on+' VIDEO').on('loadeddata',function() {
             if ( debug ) console.log('video loaded for '+on);
@@ -95,28 +96,14 @@ function rotate ( fadeTime = 1000 ) {
         } else {
           console.warn("Could not determine media type or unsupported format: "+contentType);
         }
-
       } else {
         console.error("Error fetching data:", xhr.status, xhr.statusText);
       }
     },
     error: function(xhr, status, error) {
       console.error("ERROR fetching data:", status, error);
-    },
-    complete: function(jqXHR, textStatus) {
-      /*
-      console.log('--- All Response Headers ---');
-      console.log(jqXHR.getAllResponseHeaders());
-      var headers = jqXHR.getAllResponseHeaders().split('\n');
-      for (var i = 0; i < headers.length; i++) {
-        var header = headers[i].trim();
-        if (header) {
-          console.log(header);
-        }
-      }*/
     }
   });
-
 
   /**
   @todo You've ruined the snow! How can I tell if the image should have snow??
@@ -139,11 +126,9 @@ function clockUpdate () {
 }
 
 
-loadConfiguration('art/config.json');
-
-
 // when the document is loaded
 $(document).ready(function() {
+  loadConfiguration('art/config.json');
 
   // start the rotation
   $('DIV#one IMG').fadeIn(2000);
@@ -199,7 +184,6 @@ $(document).ready(function() {
         $('DIV.pane IMG').removeClass('contain');
         $('DIV.pane IMG').addClass(imageFit);
       }
-
       console.log('Toggling the image fit to: '+imageFit);
     } else {
       if (debug) console.log("An unrecognized key was pressed: "+event.which);

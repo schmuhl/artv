@@ -36,7 +36,7 @@ if ( file_exists($cache) ) {
 */
 
 
-// PULL FROM GOOGLE DRIVE
+// ------------------------------ PULL FROM GOOGLE DRIVE
 if ( isset($config->GoogleDrive) && isset($config->GoogleDrive->enabled) && $config->GoogleDrive->enabled ) {
   require __DIR__ . '/googleDrive/vendor/autoload.php';
 
@@ -53,18 +53,17 @@ if ( isset($config->GoogleDrive) && isset($config->GoogleDrive->enabled) && $con
           'fields' => 'files(id, name, mimeType)',
       ]);
       $files = $results->getFiles();
-      if ( $debug ) {  // show the list of eligible files
+      if ( $debug ) {  // show the list of eligible files instead
         header("HTTP/1.1 200 OK");
         header('Content-type: text/json');
         echo json_encode(array_values($files)); // Encode the file listing as JSON
         exit();
       }
 
-      if ( count($files) > 0 ) {
+      if ( count($files) > 0 ) {  // if we have more than one file
         //print_r($files); print_r(count($files)); die();
         $file = $files[rand(0,count($files)-1)];
         //print_r($file); die();
-
         $fileId = $file->id; //access id as an object property.
         $name = $file->getName();
         $mimeType = $file->getMimeType();
@@ -92,10 +91,8 @@ if ( isset($config->GoogleDrive) && isset($config->GoogleDrive->enabled) && $con
         */
 
 
-        try {
+        try {  // get the file from Google Drive
           $response = $service->files->get($fileId, ['alt' => 'media']);
-          //$response = $request->execute(); // Execute the request to get the Guzzle response
-
           if ($response->getStatusCode() == 200) {
             header("HTTP/1.1 200 OK");
             if (!empty($mimeType)) header('Content-type: ' . $mimeType);
@@ -104,24 +101,19 @@ if ( isset($config->GoogleDrive) && isset($config->GoogleDrive->enabled) && $con
               header('Cache-Control: no-cache, no-store, must-revalidate');
               header('Pragma: no-cache');
               header('Expires: 0');
-
-              // Stream the response body directly to the output
-              fpassthru($response->getBody()->detach());
+              fpassthru($response->getBody()->detach()); // Stream the response body directly to the output
               exit();
             } else {
-              header("HTTP/1.1 " . $response->getStatusCode());
-              echo json_encode(['error' => 'Failed to download file.', 'status_code' => $response->getStatusCode()]);
-              exit();
+              //header("HTTP/1.1 " . $response->getStatusCode());
+              //echo json_encode(['error' => 'Failed to download file.', 'status_code' => $response->getStatusCode()]);
+              //exit();
             }
         } catch (Google_Service_Exception $e) {
             error_log('Error downloading file: ' . $e->getMessage());
-            header("HTTP/1.1 500 Internal Server Error");
-            echo json_encode(['error' => 'Failed to download file.']);
-            exit();
+            //header("HTTP/1.1 500 Internal Server Error");
+            //echo json_encode(['error' => 'Failed to download file.']);
+            //exit();
         }
-
-
-
       } else {  // no files were in the google drive folder
         error_log("No files found in specified Google Drive.");
       }
@@ -132,7 +124,7 @@ if ( isset($config->GoogleDrive) && isset($config->GoogleDrive->enabled) && $con
     error_log("Could not open Google Drive API service file.");
   }
 
-  // Something went wrong. Show the error message.
+  // Something went wrong. Show the error message instead.
   $file = 'arTV-error.jpg';
   header("HTTP/1.1 200 OK");
   header('Content-type: '.mime_content_type($file));
@@ -146,36 +138,35 @@ if ( isset($config->GoogleDrive) && isset($config->GoogleDrive->enabled) && $con
 }
 
 
-// PULL FROM LOCAL ART FOLDER
-$directory = 'art';
-if ( !is_dir($directory) ) { // ensure the download directory exists
-  echo "Could not find the download directory.\n";
-  exit(1);
-}
-$files = getArt($directory);  // from the main folder, works for every day of the year
-$today = getdate();
-$files = array_merge($files,getArt('art/'.$today['mon']));  // monthly art
-$today = getArt('art/'.$today['mon'].'/'.$today['mon'].'-'.$today['mday']);  // daily art
-if ( count($today) > 0 ) $files = $today;
-// only look at image files
-$files2 = $files;
+
+// ------------------------------ PULL FROM LOCAL ART FOLDER
 $files = array();
-foreach ( $files2 as $file ) {
-  $type = @mime_content_type($file);
-  if ( !empty($type) && in_array(substr($type,0,5),array('image','video')) ) $files []= $file;
+$directory = 'art';
+if ( is_dir($directory) ) {  // get a list of media files from the art directory
+  $files = getArt($directory);  // from the main folder, works for every day of the year
+  $today = getdate();
+  $files = array_merge($files,getArt('art/'.$today['mon']));  // monthly art
+  $today = getArt('art/'.$today['mon'].'/'.$today['mon'].'-'.$today['mday']);  // daily art
+  if ( count($today) > 0 ) $files = $today;
+  // only look at image files
+  $files2 = $files;
+  $files = array();
+  foreach ( $files2 as $file ) {
+    $type = @mime_content_type($file);
+    if ( !empty($type) && in_array(substr($type,0,5),array('image','video')) ) $files []= $file;
+  }
+
+  if ( $debug ) {  // if requested as a list, show the data
+    header("HTTP/1.1 200 OK");
+    header('Content-type: text/json');
+    echo json_encode(array_values($files)); // Encode the file listing as JSON
+    exit();
+  }
+} else {
+  error_log("Could not find the download directory: $directory");
 }
 
-// if requested as a list, show the data
-if ( $debug ) {
-  header("HTTP/1.1 200 OK");
-  header('Content-type: text/json');
-  echo json_encode(array_values($files)); // Encode the file listing as JSON
-  exit();
-}
-
-
-
-// return the contents of a random image
+// return the contents of a random media
 //print_r($files);
 if ( count($files) > 0 ) $file = $files[array_rand($files,1)];
 else $file = 'arTV-error.jpg';
