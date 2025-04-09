@@ -132,8 +132,12 @@ You can change some of the configuration with a simple JSON file located at "art
 {
   "debug" : false,
   "showClock" : true,
-  "rotationSpeed" : 60,
+  "rotationSpeed" : 1,
   "imageFit" : "contain",
+  "blanking" : {
+    "start" : "10:00 PM",
+    "end" : "6:00 AM"
+  },
   "GoogleDrive" : {
     "enabled" : false,
     "serviceAccountFile" : "PATH TO FILE",
@@ -141,7 +145,7 @@ You can change some of the configuration with a simple JSON file located at "art
   }
 }
 ```
-Note that rotation speed is in minutes and that the image fit setting can be either "contain" which will show the whole image, or "cover" which will zoom in on the image to ensure it covers the whole screen.
+Note that rotation speed is in minutes and that the image fit setting can be either "contain" which will show the whole image, or "cover" which will zoom in on the image to ensure it covers the whole screen. You can also specify a time range during which the screen will be blanked.
 Additionally, you can press "p" to toggle a preview of the next image, "d" to toggle debug, "f" to toggle the image fit, and "c" to toggle the clock manually.
 
 ### Enjoy!
