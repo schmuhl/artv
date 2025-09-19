@@ -1,5 +1,4 @@
 <?php
-phpinfo();
 // load the configuration file, if available
 $configFile = 'art/config.json';
 $config = null;
