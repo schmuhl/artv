@@ -1,5 +1,5 @@
 <?php
-
+phpinfo();
 // load the configuration file, if available
 $configFile = 'art/config.json';
 $config = null;
@@ -19,6 +19,19 @@ if ( file_exists($configFile) ) {
   $debug = ( isset($_GET['debug']) ) ? true : false;
   $cache = '/tmp/artv-cache';
   $cacheLength = 30;  // in seconds
+
+  // set the timezone
+  if (isset($config->timezone) && !empty($config->timezone)) {
+    try {
+        date_default_timezone_set($config->timezone);
+    } catch (Exception $e) {
+      //echo "Error setting timezone from config file. Using server's default.<br>";
+      date_default_timezone_set(date_default_timezone_get());
+    }
+  } else {
+      //echo "No 'timezone' specified in config.json. Using server's default.<br>";
+      date_default_timezone_set(date_default_timezone_get());
+  }
 }
 
 

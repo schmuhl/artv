@@ -44,6 +44,10 @@ cd googleDrive
 composer init
 composer require google/apiclient:^2.0
 ```
+Set the wallpaper. This is for the LXDE file manager, so the command may be different depending.
+```bash
+pcmanfm --set-wallpaper /var/www/html/artv/arTV.jpg
+```
 
 ### Add your images
 The "art" folder holds all of the images that can be shown. Eligible images will be shown randomly for the configured duration based on the following options:
@@ -142,7 +146,8 @@ You can change some of the configuration with a simple JSON file located at "art
     "enabled" : false,
     "serviceAccountFile" : "PATH TO FILE",
     "folderID" : "GOOGLE DRIVE FOLDER ID FROM URL"
-  }
+  },
+  "timezone" : "America/Denver"
 }
 ```
 Note that rotation speed is in minutes and that the image fit setting can be either "contain" which will show the whole image, or "cover" which will zoom in on the image to ensure it covers the whole screen. You can also specify a time range during which the screen will be blanked.
