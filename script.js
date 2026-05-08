@@ -1,4 +1,5 @@
-var art = [];  // no longer used
+//var art = [];  // no longer used
+var tvid;
 var timer;
 var rotationSpeed = 60;  // default rotation speed, in minutes
 var rotationInterval;
@@ -9,127 +10,118 @@ var blanking = false;  // default for blanking (turning off overnight)
 var clockInterval;
 
 
-loadConfiguration('art/config.json');
+startApp();
 
 
-// when the document is loaded
-$(document).ready(function() {
-  // start the rotation and clock
-  $('DIV#one IMG').fadeIn(2000);  // show the splash
-  setTimeout(function (){   // start the rotation after a bit of splash
-    rotate();
-    rotationInterval = setInterval(rotate,rotationSpeed*60*1000);
-    if ( showClock ) {  // show and update the clock
-      setTimeout(function(){ $("DIV#clock").fadeIn(1000); },400);  // fade the clock in after the splash
-      clockUpdate();
-      clockInterval = setInterval(clockUpdate,20000);  // update the clock every so often
-    }
-  },4000);
+async function startApp() {
 
+  await loadConfiguration();
 
-  // change the rotation on mouse click
-  $(document).click(function(event) {
-    rotate(1);
-  });
-
-  // Handle hotkeys
-  $(document).keyup(function(event) {
-    if ( event.which == 16 ) { // shift
-      // do nothing, likely just a force-refresh on the browser
-    } else if ( event.which == 68 ) { // Toggle debug "d"
-      console.log("Toggling the display of debug information.");
-      if ( debug ) {
-        debug = false;
-        $('DIV.pane').removeClass('debug');
-      } else {
-        debug = true;
-        $('DIV.pane').addClass('debug');
+  // when the document is loaded
+  $(document).ready(function() {
+    // start the rotation and clock
+    $('DIV#one IMG').fadeIn(2000);  // show the splash
+    setTimeout(function (){   // start the rotation after a bit of splash
+      rotate();
+      rotationInterval = setInterval(rotate,rotationSpeed*60*1000);
+      if ( showClock ) {  // show and update the clock
+        setTimeout(function(){ $("DIV#clock").fadeIn(1000); },400);  // fade the clock in after the splash
+        clockUpdate();
+        clockInterval = setInterval(clockUpdate,20000);  // update the clock every so often
       }
-    } else if ( event.which == 80 ) {  // Toggle showing the preview "p"
-      console.log("Toggling the display of the preview image.");
-      if ( $("IMG#preload").hasClass("show") ) $("IMG#preload").removeClass("show");
-      else $("IMG#preload").addClass("show");
-    } else if ( event.which == 67 ) {  // Toggle showing the clock "c"
-      console.log("Toggling the display of the clock.");
-      if ( $('DIV#clock').is(':visible') ) {
-        $('DIV#clock').hide();
-        clearInterval(clockInterval);
-      } else {
-        $('DIV#clock').show();
-        clockInterval = setInterval(clockUpdate,30000);
-      }
-    } else if ( event.which == 70 ) {  // Toggle showing the image fit "f"
-      if ( imageFit == 'cover' ) {
-        imageFit = 'contain';
-        $('DIV.pane IMG').removeClass('cover');
-        $('DIV.pane IMG').addClass(imageFit);
-      } else {
-        imageFit = 'cover';
-        $('DIV.pane IMG').removeClass('contain');
-        $('DIV.pane IMG').addClass(imageFit);
-      }
-      console.log('Toggling the image fit to: '+imageFit);
-    } else {
-      if (debug) console.log("An unrecognized key was pressed: "+event.which);
+    },4000);
+
+
+    // change the rotation on mouse click
+    $(document).click(function(event) {
       rotate(1);
-    }
-  });
-
-});
-
-
-
-
-
-function loadConfiguration ( path ) {
-  // attempt to load configuration from a file
-  fetch('art/config.json')
-    .then(response => {
-      if (!response.ok) {
-        if (debug) console.log('Configuration: Additional configuration not available in "'+path+'".');
-      }
-      return response.json();
-    })
-    .then(data => {  // process the json for global config variables
-      for (const key in data) {
-        if (data.hasOwnProperty(key)) {
-          switch (key) {
-            case 'debug':
-            case 'showClock':
-            case 'rotationSpeed':
-            case 'imageFit':
-            case 'blanking':
-            case 'GoogleDrive':
-              window[key]=data[key];
-              if (debug) console.log("Configuration: "+key+" set to "+data[key]);
-              break;
-            default:
-              if (debug) console.warn(`Configuration: Unrecognized '${key}' value found in configuration file and ignored.`);
-              break;
-          }
-        }
-      }
-      // special configuration processing
-      if ( imageFit!='contain' && imageFit!='cover' ) imageFit = 'contain'; // default is contain
-      if ( debug ) $('DIV.pane').addClass('debug');  // debug
-      if ( blanking != false ) {  // start and end times were provided for blanking
-        if ( blanking.hasOwnProperty('start') && blanking.start !== null && blanking.start !== ""
-          && blanking.hasOwnProperty('end') && blanking.end !== null && blanking.end !== "" ) {
-          //console.log(blanking);
-          blanking.start = stringToTime(blanking.start);
-          blanking.end = stringToTime(blanking.end);
-          if ( blanking.start > blanking.end ) { // start today, end tomorrow
-            blanking.end.setDate(blanking.end.getDate() + 1);
-          }
-          //console.log(blanking);
-        } else {
-          console.warn('Configuration: Blanking start and end times not provided.');
-        }
-      }
-    })
-    .catch(error => {  // oop, something went wrong reading and processing the config?
-      console.warn('Configuration: Could not load configuration from "'+path+'".');
     });
+
+    // Handle hotkeys
+    $(document).keyup(function(event) {
+      if ( event.which == 16 ) { // shift
+        // do nothing, likely just a force-refresh on the browser
+      } else if ( event.which == 68 ) { // Toggle debug "d"
+        console.log("Toggling the display of debug information.");
+        if ( debug ) {
+          debug = false;
+          $('DIV.pane').removeClass('debug');
+        } else {
+          debug = true;
+          $('DIV.pane').addClass('debug');
+        }
+      } else if ( event.which == 80 ) {  // Toggle showing the preview "p"
+        console.log("Toggling the display of the preview image.");
+        if ( $("IMG#preload").hasClass("show") ) $("IMG#preload").removeClass("show");
+        else $("IMG#preload").addClass("show");
+      } else if ( event.which == 67 ) {  // Toggle showing the clock "c"
+        console.log("Toggling the display of the clock.");
+        if ( $('DIV#clock').is(':visible') ) {
+          $('DIV#clock').hide();
+          clearInterval(clockInterval);
+        } else {
+          $('DIV#clock').show();
+          clockInterval = setInterval(clockUpdate,30000);
+        }
+      } else if ( event.which == 70 ) {  // Toggle showing the image fit "f"
+        if ( imageFit == 'cover' ) {
+          imageFit = 'contain';
+          $('DIV.pane IMG').removeClass('cover');
+          $('DIV.pane IMG').addClass(imageFit);
+        } else {
+          imageFit = 'cover';
+          $('DIV.pane IMG').removeClass('contain');
+          $('DIV.pane IMG').addClass(imageFit);
+        }
+        console.log('Toggling the image fit to: '+imageFit);
+      } else {
+        if (debug) console.log("An unrecognized key was pressed: "+event.which);
+        rotate(1);
+      }
+    });
+
+  });
+}
+
+
+async function loadConfiguration() {
+    var path = 'art/config.json';
+    const urlParams = new URLSearchParams(window.location.search);
+    tvid = urlParams.get('tv');
+
+    // Corrected path logic
+    if (tvid) {
+      let tvPath = `art/config-${tvid}.json`;
+      const exists = await fileExists(tvPath);
+      if (exists) path = tvPath;
+    }
+
+    try {
+      const response = await fetch(path);
+      if (!response.ok) return; // Use defaults if file missing
+
+      const data = await response.json();
+
+      // Map data to global variables
+      if (data.debug !== undefined) debug = data.debug;
+      if (data.showClock !== undefined) showClock = data.showClock;
+      if (data.rotationSpeed !== undefined) rotationSpeed = data.rotationSpeed;
+      if (data.imageFit !== undefined) imageFit = data.imageFit;
+      if (data.blanking !== undefined) blanking = data.blanking;
+
+      // Process blanking times if they exist
+      if (blanking && blanking.start && blanking.end) {
+        blanking.start = stringToTime(blanking.start);
+        blanking.end = stringToTime(blanking.end);
+        if (blanking.start > blanking.end) {
+          blanking.end.setDate(blanking.end.getDate() + 1);
+        }
+      }
+
+      if (debug) console.log("Config loaded from:", path);
+    } catch (e) {
+      console.warn("Using default config due to error:", e);
+    }
 }
 
 
@@ -145,7 +137,8 @@ function rotate ( fadeTime = 1000 ) {
   }
 
   // get the media to show next
-  const mediaUrl = 'api.php?cachebuster='+Date.now().toString();
+  const mediaUrl = 'api.php?tv='+tvid+'&cachebuster='+Date.now().toString();
+  if ( debug ) console.log(mediaUrl);
   $.ajax({
     url: mediaUrl,
     method: 'GET',
@@ -254,5 +247,15 @@ function clockUpdate () {
       window.location.reload(true);
     },Math.max(0,timeDifference));
     if (debug ) console.log("Coming back from blank in "+timeDifference+' or at '+blanking.end);
+  }
+}
+
+
+async function fileExists(filename) {
+  try {
+    const response = await fetch(filename, { method: 'HEAD' });
+    return response.ok; // Returns true if status is 200-299
+  } catch (error) {
+    return false; // Network error or file doesn't exist
   }
 }
