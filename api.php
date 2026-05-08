@@ -1,6 +1,9 @@
 <?php
 // load the configuration file, if available
-$configFile = 'art/config.json';
+$tv = ( isset($_GET['tv']) && is_numeric($_GET['tv']) ) ? $_GET['tv'] : null;
+if ( $tv && file_exists("art/config-$tv.json") ) $configFile = "art/config-$tv.json";
+else $configFile = 'art/config.json';
+
 $config = null;
 if ( file_exists($configFile) ) {
   $json = file_get_contents($configFile);
@@ -17,7 +20,7 @@ if ( file_exists($configFile) ) {
   //$debug = $config->debug;
   $debug = ( isset($_GET['debug']) ) ? true : false;
   $cache = '/tmp/artv-cache';
-  $cacheLength = 30;  // in seconds
+  $cacheLength = 60*5;  // in seconds
 
   // set the timezone
   if (isset($config->timezone) && !empty($config->timezone)) {
@@ -33,19 +36,175 @@ if ( file_exists($configFile) ) {
   }
 }
 
-
-/* pull from the cache, if recent
-if ( file_exists($cache) ) {
-  if ( time()-filemtime($cache) <= $cacheLength ) {
-    if ( $debug ) echo "Using cached file. ";
-    else outputFile($cache);
-  } else {
-    if ( $debug ) echo "Not using cached file. ";
-  }
-} else {
-  if ( $debug ) echo "There is no cached file. ";
+if (!$config) {
+  http_response_code(500);
+  error_log("Missing or invalid config file: $configFile");
+  exit();
 }
-*/
+
+
+
+// ------------------------------ PULL FROM ICLOUD SHARED ALBUM
+if ( isset($config->iCloud) && isset($config->iCloud->enabled) && $config->iCloud->enabled
+     && isset($config->iCloud->url) && !empty($config->iCloud->url) ) {
+
+    $files = [];
+    // Extract the Token from the end of the URL (after the #)
+    $albumId = explode('#', $config->iCloud->url)[1] ?? '';
+    $cacheFile = $cache . '-iCloud-tv' . $tv . '.json';
+
+    if (file_exists($cacheFile) && (time() - filemtime($cacheFile) < $cacheLength)) {
+      $cached = json_decode(file_get_contents($cacheFile), true);
+      if (is_array($cached)) {
+        $files = $cached;
+      }
+    }
+
+    if (empty($files)) {
+        $files = fetchICloudAlbumList($albumId);
+        if (!empty($files)) {
+            file_put_contents($cacheFile, json_encode($files));
+        }
+    }
+
+    if (!empty($files)) {
+        $target = $files[array_rand($files)];
+        if ($debug) {
+            header('Content-type: application/json');
+            echo json_encode(["tv" => $tv, "count" => count($files), "target" => $target]);
+        } else {
+            header("Location: $target", true, 302);
+        }
+        exit();
+    } else {
+        outputFile('arTV-error.jpg');
+        exit();
+    }
+}
+
+/**
+ * Fetches the list of tokenized URLs from iCloud
+ */
+ function fetchICloudAlbumList($albumId) {
+
+    $host = "p23-sharedstreams.icloud.com";
+
+    $baseUrl = "https://{$host}/{$albumId}/sharedstreams";
+
+    // Initial metadata request
+    $response = callICloudApi(
+        "{$baseUrl}/webstream",
+        json_encode([
+            "streamCtag" => null
+        ])
+    );
+
+    $data = json_decode($response, true);
+
+    // Handle Apple partition redirect
+    if (isset($data['X-Apple-MMe-Host'])) {
+
+        $host = $data['X-Apple-MMe-Host'];
+
+        $baseUrl = "https://{$host}/{$albumId}/sharedstreams";
+
+        $response = callICloudApi(
+            "{$baseUrl}/webstream",
+            json_encode([
+                "streamCtag" => null
+            ])
+        );
+
+        $data = json_decode($response, true);
+    }
+
+    if (
+        !isset($data['photos']) ||
+        !is_array($data['photos']) ||
+        empty($data['photos'])
+    ) {
+        return [];
+    }
+
+    // Collect photo GUIDs
+    $photoGuids = [];
+
+    foreach ($data['photos'] as $photo) {
+
+        if (isset($photo['photoGuid'])) {
+            $photoGuids[] = $photo['photoGuid'];
+        }
+    }
+
+    if (empty($photoGuids)) {
+        return [];
+    }
+
+    // Request signed asset URLs
+    $assetResponse = callICloudApi(
+        "{$baseUrl}/webasseturls",
+        json_encode([
+            "photoGuids" => $photoGuids
+        ])
+    );
+
+    $assetData = json_decode($assetResponse, true);
+
+    if (
+        !isset($assetData['items']) ||
+        !is_array($assetData['items'])
+    ) {
+        return [];
+    }
+
+    $urls = [];
+
+    foreach ($assetData['items'] as $guid => $item) {
+
+        // Modern iCloud response: full URL already provided
+        if (isset($item['url'])) {
+            $urls[] = $item['url'];
+            continue;
+        }
+
+        // Older fallback (rare)
+        if (isset($item['url_location'], $item['url_path'])) {
+            $urls[] = "https://" . $item['url_location'] . $item['url_path'];
+        }
+    }
+
+    return $urls;
+}
+
+/**
+ * Helper to handle the POST with headers that bypass Apple's 400/403 filters
+ */
+ function callICloudApi($url, $postData) {
+
+     $ch = curl_init($url);
+
+     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+     curl_setopt($ch, CURLOPT_POST, true);
+     curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+
+     curl_setopt($ch, CURLOPT_HTTPHEADER, [
+         'Content-Type: application/json',
+         'Origin: https://www.icloud.com',
+         'Referer: https://www.icloud.com/',
+     ]);
+
+     curl_setopt($ch, CURLOPT_USERAGENT,
+         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+     );
+
+     $response = curl_exec($ch);
+
+     curl_close($ch);
+
+     return $response;
+ }
+
+
 
 
 // ------------------------------ PULL FROM GOOGLE DRIVE
@@ -79,29 +238,6 @@ if ( isset($config->GoogleDrive) && isset($config->GoogleDrive->enabled) && $con
         $fileId = $file->id; //access id as an object property.
         $name = $file->getName();
         $mimeType = $file->getMimeType();
-
-        /*
-        try {
-          $response = $service->files->get($fileId, ['alt' => 'media']);  // grab the whole file
-          $fileContent = $response->getBody()->getContents();
-          if ($fileContent !== false) {
-            header("HTTP/1.1 200 OK");
-            if ( !empty($mimeType) ) header('Content-type: '.$mimeType);
-            header('Content-Length: '.strlen($fileContent));
-            header('X-Image-Filename: '.$name);
-            header('Cache-Control: no-cache, no-store, must-revalidate');
-            header('Pragma: no-cache'); // For older browsers (HTTP 1.0)
-            header('Expires: 0'); // For older browsers (HTTP 1.0)
-            echo $fileContent;
-            exit();
-          } else {  // could not get the contents of the file
-            error_log("Error downloading file from google Drive ($name) Could not get file contents.");
-          }
-        } catch (Exception $e) {  // some kind of exception was fired, e.g. it's a google doc, not an actual file
-          error_log("Error downloading file from Google Drive ($name) " . $e->getMessage());
-        }
-        */
-
 
         try {  // get the file from Google Drive
           $response = $service->files->get($fileId, ['alt' => 'media']);
@@ -137,15 +273,7 @@ if ( isset($config->GoogleDrive) && isset($config->GoogleDrive->enabled) && $con
   }
 
   // Something went wrong. Show the error message instead.
-  $file = 'arTV-error.jpg';
-  header("HTTP/1.1 200 OK");
-  header('Content-type: '.mime_content_type($file));
-  header('Content-Length: '.filesize($file));
-  header('X-Image-Filename: '.$file);
-  header('Cache-Control: no-cache, no-store, must-revalidate');
-  header('Pragma: no-cache'); // For older browsers (HTTP 1.0)
-  header('Expires: 0'); // For older browsers (HTTP 1.0)
-  echo file_get_contents($file);
+  outputFile('arTV-error.jpg');
   exit();
 }
 
@@ -164,7 +292,9 @@ if ( is_dir($directory) ) {  // get a list of media files from the art directory
   $files2 = $files;
   $files = array();
   foreach ( $files2 as $file ) {
-    $type = @mime_content_type($file);
+    if (file_exists($file)) {
+        $type = mime_content_type($file);
+    }
     if ( !empty($type) && in_array(substr($type,0,5),array('image','video')) ) $files []= $file;
   }
 
@@ -185,6 +315,22 @@ else $file = 'arTV-error.jpg';
 outputFile($file);
 
 
+// Look at a path and return all the images
+function getArt ( $directory ) {
+  //echo "\nLooking in $directory ...";
+  if ( !is_dir($directory) ) return array();
+  $files = scandir($directory); // Get file listing
+  $temp = array();
+  foreach ( $files as $file ) {
+    if ( $file == '.DS_Store' || is_dir($directory.'/'.$file) || substr($file,0,2) == '._' ) continue;
+    //if ( !is_array(getimagesize($directory.'/'.$file)) ) continue;
+    //if ( filesize($directory.'/'.$file) < 100000 ) continue;
+    $temp []= $directory.'/'.$file;
+  }
+  //echo " found ".count($temp)." files.";
+  return $temp;
+}
+
 
 
 
@@ -201,7 +347,7 @@ function outputFile ( $file ) {
   $handle = fopen($file, "rb");
   if ($handle === false ) {
     header("HTTP/1.1 500 Internal Server Error");
-    echo "Error: Could not open file '$filePath'.";
+    echo "Error: Could not open file '$file'.";
     exit();
   }
   while (!feof($handle)) {
@@ -214,21 +360,4 @@ function outputFile ( $file ) {
   }
   fclose($handle);
   exit();
-}
-
-
-// Look at a path and return all the images
-function getArt ( $directory ) {
-  //echo "\nLooking in $directory ...";
-  if ( !is_dir($directory) ) return array();
-  $files = scandir($directory); // Get file listing
-  $temp = array();
-  foreach ( $files as $file ) {
-    if ( $file == '.DS_Store' || is_dir($directory.'/'.$file) || substr($file,0,2) == '._' ) continue;
-    //if ( !is_array(getimagesize($directory.'/'.$file)) ) continue;
-    //if ( filesize($directory.'/'.$file) < 100000 ) continue;
-    $temp []= $directory.'/'.$file;
-  }
-  //echo " found ".count($temp)." files.";
-  return $temp;
 }
