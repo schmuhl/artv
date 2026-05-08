@@ -142,6 +142,10 @@ You can change some of the configuration with a simple JSON file located at "art
     "start" : "10:00 PM",
     "end" : "6:00 AM"
   },
+  "iCloud" : {
+    "enabled" : true,
+    "url" : "https://www.icloud.com/sharedalbum/#ALBUM-ID-HERE"
+  },
   "GoogleDrive" : {
     "enabled" : false,
     "serviceAccountFile" : "PATH TO FILE",
