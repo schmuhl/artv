@@ -55,6 +55,9 @@ if ( isset($config->iCloud) && isset($config->iCloud->enabled) && $config->iClou
 
     if (file_exists($cacheFile) && (time() - filemtime($cacheFile) < $cacheLength)) {
       $cached = json_decode(file_get_contents($cacheFile), true);
+      if (is_array($cached) && !empty($cached)) {
+        $files = $cached;
+      }
       if (is_array($cached)) {
         $files = $cached;
       }
@@ -126,14 +129,18 @@ if ( isset($config->iCloud) && isset($config->iCloud->enabled) && $config->iClou
         return [];
     }
 
-    // Collect photo GUIDs
+    // Collect photo GUIDs (keep only real image photos if possible)
     $photoGuids = [];
-
     foreach ($data['photos'] as $photo) {
-
-        if (isset($photo['photoGuid'])) {
-            $photoGuids[] = $photo['photoGuid'];
+        if (
+            !isset($photo['photoGuid']) ||
+            !isset($photo['derivatives']) ||
+            !is_array($photo['derivatives']) ||
+            empty($photo['derivatives'])
+        ) {
+            continue;
         }
+        $photoGuids[] = $photo['photoGuid'];
     }
 
     if (empty($photoGuids)) {
@@ -161,20 +168,45 @@ if ( isset($config->iCloud) && isset($config->iCloud->enabled) && $config->iClou
 
     foreach ($assetData['items'] as $guid => $item) {
 
-        // Modern iCloud response: full URL already provided
-        if (isset($item['url'])) {
-            $urls[] = $item['url'];
-            continue;
+      // look for derivatives first
+      if (isset($item['derivatives']) && is_array($item['derivatives'])) {
+        $best = null;
+        $bestSize = 0;
+
+        foreach ($item['derivatives'] as $size => $d) {
+          if ((int)$size > $bestSize && isset($d['checksum'])) {
+            $best = $d;
+            $bestSize = (int)$size;
+          }
         }
 
-        // Older fallback (rare)
-        if (isset($item['url_location'], $item['url_path'])) {
-            $urls[] = "https://" . $item['url_location'] . $item['url_path'];
+        if ($best && isset($item['url_location'])) {
+          $urls[] =
+            "https://" .
+            $item['url_location'] .
+            $best['checksum'];
+          continue;
         }
+      }
+
+      // then, look for this kind of url
+      if (isset($item['url_location'], $item['url_path'])) {
+        $urls[] = "https://" . $item['url_location'] . $item['url_path'];
+        continue;
+      }
+
+      // last, look for normal urls
+      if (isset($item['url'])) {
+        $urls[] = $item['url'];
+      }
+
+      // LAST RESORT (some responses embed full CDN info differently)
+      if (isset($item['urls'][0])) {
+          $urls[] = $item['urls'][0];
+      }
     }
-
     return $urls;
-}
+  }
 
 /**
  * Helper to handle the POST with headers that bypass Apple's 400/403 filters
@@ -292,9 +324,7 @@ if ( is_dir($directory) ) {  // get a list of media files from the art directory
   $files2 = $files;
   $files = array();
   foreach ( $files2 as $file ) {
-    if (file_exists($file)) {
-        $type = mime_content_type($file);
-    }
+    $type = @mime_content_type($file);
     if ( !empty($type) && in_array(substr($type,0,5),array('image','video')) ) $files []= $file;
   }
 
