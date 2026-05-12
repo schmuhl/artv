@@ -1,4 +1,4 @@
-var tvid, rotationSpeed = 60, rotationInterval, imageFit = 'contain', debug = false;
+var screenid, rotationSpeed = 60, rotationInterval, imageFit = 'contain', debug = false;
 var showClock = false, blanking = false, clockInterval;
 
 
@@ -56,8 +56,8 @@ async function startApp() {
 async function loadConfiguration() {
   var path = 'art/config.json';
   const urlParams = new URLSearchParams(window.location.search);
-  tvid = urlParams.get('tv');
-  const tvKey = "TV" + tvid;
+  screenid = urlParams.get('screen');
+  const screenKey = "screen" + screenid;
 
   try {
     const response = await fetch(path);
@@ -65,10 +65,10 @@ async function loadConfiguration() {
 
     let data = await response.json();
 
-    // look for configuration overrides for this tv
-    if ( tvid && data[tvKey]) {
-      console.log(`Applying configuration for TV ${tvid}`);
-      data = { ...data, ...data[tvKey] };
+    // look for configuration overrides for this screen
+    if ( screenid && data[screenKey]) {
+      console.log(`Applying configuration for screen ${screenid}`);
+      data = { ...data, ...data[screenKey] };
     }
 
     // Map data to global variables
@@ -105,7 +105,7 @@ async function rotate() {
 
     const onPane = document.getElementById(offPane.id === 'one' ? 'two' : 'one');
 
-    const mediaUrl = `api.php?tv=${tvid}&cb=${Date.now()}`;
+    const mediaUrl = `api.php?screen=${screenid}&cb=${Date.now()}`;
 
     try {
         const response = await fetch(mediaUrl);

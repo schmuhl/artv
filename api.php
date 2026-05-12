@@ -1,6 +1,6 @@
 <?php
 // load the configuration file
-$config = loadConfiguration((isset($_GET['tv']))?$_GET['tv']:null);
+$config = loadConfiguration((isset($_GET['screen']))?$_GET['screen']:null);
 if (!$config) {
   http_response_code(500);
   error_log("The configuration could not be loaded.");
@@ -16,7 +16,7 @@ if ( isset($config->iCloud) && isset($config->iCloud->enabled) && $config->iClou
     $files = [];
     // Extract the Token from the end of the URL (after the #)
     $albumId = explode('#', $config->iCloud->url)[1] ?? '';
-    $cacheFile = $config->cache . '-iCloud-tv' . $config->tv . '.json';
+    $cacheFile = $config->cache . '-iCloud-screen' . $config->screen . '.json';
 
     if (file_exists($cacheFile) && (time() - filemtime($cacheFile) < $config->cacheLength)) {
       $cached = json_decode(file_get_contents($cacheFile), true);
@@ -39,7 +39,7 @@ if ( isset($config->iCloud) && isset($config->iCloud->enabled) && $config->iClou
         $target = $files[array_rand($files)];
         if ($config->debug) {
             header('Content-type: application/json');
-            echo json_encode(["tv" => $config->tv, "count" => count($files), "target" => $target]);
+            echo json_encode(["screen" => $config->screen, "count" => count($files), "target" => $target]);
         } else {
             header("Location: $target", true, 302);
         }
@@ -357,7 +357,7 @@ function outputFile ( $file ) {
 
 
 // load the configuration
-function loadConfiguration ( $tv ) {
+function loadConfiguration ( $screen ) {
   $configFile = 'art/config.json';
   $config = null;
 
@@ -375,15 +375,15 @@ function loadConfiguration ( $tv ) {
     }
 
     // process overrides, if they exist
-    $config->tv = null;
-    if ( $tv ) {
-      $tvKey = "TV$tv";
-      if ( isset($config->$tvKey) ) {
-        $overrides = $config->$tvKey;
+    $config->screen = null;
+    if ( $screen ) {
+      $screenKey = "Screen$screen";
+      if ( isset($config->$screenKey) ) {
+        $overrides = $config->$screenKey;
         foreach (get_object_vars($overrides) as $key => $value) {
-          $config->$key = $value; // This overrides the base setting with the TV-specific one
+          $config->$key = $value; // This overrides the base setting with the screen-specific one
         }
-        $config->tv = $tv;
+        $config->screen = $screen;
       }
     }
 
