@@ -39,15 +39,18 @@ async function startApp() {
       const panes = document.querySelectorAll('.pane');
       if (e.key === 'd') {
         debug = !debug;
+        console.log("Toggling debug to "+debug);
         panes.forEach(p => p.classList.toggle('debug', debug));
       } else if (e.key === 'c') {
         const isVisible = clock.style.display !== 'none';
         clock.style.display = isVisible ? 'none' : 'block';
+        console.log("Toggling clock to "+!isVisible);
       } else if (e.key === 'f') {
         imageFit = (imageFit === 'cover') ? 'contain' : 'cover';
         document.querySelectorAll('.pane img').forEach(img => {
             img.className = imageFit;
         });
+        console.log("Toggling image fit to "+imageFit);
       }
     });
 }
