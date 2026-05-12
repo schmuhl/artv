@@ -2,33 +2,17 @@
 <html>
   <head>
     <title>arTV</title>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="script.js"></script>
     <script src="snow.js"></script>
+    <link rel="stylesheet" href="style.css" />
     <link rel="stylesheet" href="snow.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@700&display=swap" rel="stylesheet">
-    <style>
-      HTML { cursor: none; }
-      BODY { margin: 0; padding: 0; background-color: #000; background-size: cover; background-repeat: no-repeat; background-attachment: fixed; background-position: center center; }
-      BODY DIV.pane { display: block; position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; z-index: 1; }
-      BODY DIV.pane IMG.cover { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
-      BODY DIV.pane IMG.contain, BODY DIV.pane VIDEO { display: block; width: 100%; height: 100%; object-fit: contain; object-position: center; }
-      BODY DIV.pane.debug { width: 70%; height: 70%; border: 5px solid white; }
-      BODY DIV.pane.debug#two { left: 30%; top: 30%; }
-      BODY DIV.pane.debug.active { border: 5px solid green; }
-      BODY DIV#snow { z-index: 10; }
-      BODY DIV#fader { position: fixed; height: 100%; width: 100%; margin: 0; background: #111; z-index: 100; }
-      BODY IMG#preload { display: none; }
-      BODY IMG#preload.show { display: block; position: fixed; top: 0; right: 0; width: 100px; border: 5px solid #ffffff; margin: 1vw; box-shadow: 5px 5px 10px; }
-      BODY DIV#clock { display: none; position: fixed; right: 1vw; bottom: 1vw; text-align: right; font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 8vh; line-height: 8vh; height: 10vh; vertical-align: bottom; color: rgba(255, 255, 255, 0.3); -webkit-text-stroke: 1px rgba(0,0,0,0.3); z-index: 200; overflow: hidden; }
-      BODY DIV#clock .ampm { font-size: 5vh; }
-    </style>
   </head>
   <body>
-    <div id="one" class="pane active"><img src="arTV.jpg" class="cover" style="display: none;"/></div>
-    <div id="two" class="pane" style="display: none;"></div>
+    <div id="one" class="pane active"><img src="arTV.jpg" class="cover"/></div>
+    <div id="two" class="pane"></div>
     <div id="snow"></div>
     <div id="clock"></div>
   </body>
