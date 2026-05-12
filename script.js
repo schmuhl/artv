@@ -85,43 +85,43 @@ async function startApp() {
 
 
 async function loadConfiguration() {
-    var path = 'art/config.json';
-    const urlParams = new URLSearchParams(window.location.search);
-    tvid = urlParams.get('tv');
+  var path = 'art/config.json';
+  const urlParams = new URLSearchParams(window.location.search);
+  tvid = urlParams.get('tv');
+  const tvKey = "TV" + tvid;
 
-    // Corrected path logic
-    if (tvid) {
-      let tvPath = `art/config-${tvid}.json`;
-      const exists = await fileExists(tvPath);
-      if (exists) path = tvPath;
+  try {
+    const response = await fetch(path);
+    if (!response.ok) return; // Use defaults if file missing
+
+    let data = await response.json();
+
+    // look for configuration overrides for this tv
+    if ( tvid && data[tvKey]) {
+      console.log(`Applying configuration for TV ${tvid}`);
+      data = { ...data, ...data[tvKey] };
     }
 
-    try {
-      const response = await fetch(path);
-      if (!response.ok) return; // Use defaults if file missing
+    // Map data to global variables
+    if (data.debug !== undefined) debug = data.debug;
+    if (data.showClock !== undefined) showClock = data.showClock;
+    if (data.rotationSpeed !== undefined) rotationSpeed = data.rotationSpeed;
+    if (data.imageFit !== undefined) imageFit = data.imageFit;
+    if (data.blanking !== undefined) blanking = data.blanking;
 
-      const data = await response.json();
-
-      // Map data to global variables
-      if (data.debug !== undefined) debug = data.debug;
-      if (data.showClock !== undefined) showClock = data.showClock;
-      if (data.rotationSpeed !== undefined) rotationSpeed = data.rotationSpeed;
-      if (data.imageFit !== undefined) imageFit = data.imageFit;
-      if (data.blanking !== undefined) blanking = data.blanking;
-
-      // Process blanking times if they exist
-      if (blanking && blanking.start && blanking.end) {
-        blanking.start = stringToTime(blanking.start);
-        blanking.end = stringToTime(blanking.end);
-        if (blanking.start > blanking.end) {
-          blanking.end.setDate(blanking.end.getDate() + 1);
-        }
+    // Process blanking times if they exist
+    if (blanking && blanking.start && blanking.end) {
+      blanking.start = stringToTime(blanking.start);
+      blanking.end = stringToTime(blanking.end);
+      if (blanking.start > blanking.end) {
+        blanking.end.setDate(blanking.end.getDate() + 1);
       }
-
-      if (debug) console.log("Config loaded from:", path);
-    } catch (e) {
-      console.warn("Using default config due to error:", e);
     }
+
+    console.log("Configuration successfully loaded.");
+  } catch (e) {
+    console.warn("Using default config due to error:", e);
+  }
 }
 
 

@@ -1,44 +1,9 @@
 <?php
-// load the configuration file, if available
-$tv = ( isset($_GET['tv']) && is_numeric($_GET['tv']) ) ? $_GET['tv'] : null;
-if ( $tv && file_exists("art/config-$tv.json") ) $configFile = "art/config-$tv.json";
-else $configFile = 'art/config.json';
-
-$config = null;
-if ( file_exists($configFile) ) {
-  $json = file_get_contents($configFile);
-  if ( $json !== false ) {
-    $config = json_decode($json);
-    if ( json_last_error() !== JSON_ERROR_NONE ) {
-      error_log("Configuration file is not valid JSON: $configFile ".json_last_error_msg());
-    }
-  } else {
-    error_log("Failed to read config file: $configFile");
-  }
-  // process values
-  //print_r($config);
-  //$debug = $config->debug;
-  $debug = ( isset($_GET['debug']) ) ? true : false;
-  $cache = '/tmp/artv-cache';
-  $cacheLength = 60*5;  // in seconds
-
-  // set the timezone
-  if (isset($config->timezone) && !empty($config->timezone)) {
-    try {
-        date_default_timezone_set($config->timezone);
-    } catch (Exception $e) {
-      //echo "Error setting timezone from config file. Using server's default.<br>";
-      date_default_timezone_set(date_default_timezone_get());
-    }
-  } else {
-      //echo "No 'timezone' specified in config.json. Using server's default.<br>";
-      date_default_timezone_set(date_default_timezone_get());
-  }
-}
-
+// load the configuration file
+$config = loadConfiguration((isset($_GET['tv']))?$_GET['tv']:null);
 if (!$config) {
   http_response_code(500);
-  error_log("Missing or invalid config file: $configFile");
+  error_log("The configuration could not be loaded.");
   exit();
 }
 
@@ -51,9 +16,9 @@ if ( isset($config->iCloud) && isset($config->iCloud->enabled) && $config->iClou
     $files = [];
     // Extract the Token from the end of the URL (after the #)
     $albumId = explode('#', $config->iCloud->url)[1] ?? '';
-    $cacheFile = $cache . '-iCloud-tv' . $tv . '.json';
+    $cacheFile = $config->cache . '-iCloud-tv' . $config->tv . '.json';
 
-    if (file_exists($cacheFile) && (time() - filemtime($cacheFile) < $cacheLength)) {
+    if (file_exists($cacheFile) && (time() - filemtime($cacheFile) < $config->cacheLength)) {
       $cached = json_decode(file_get_contents($cacheFile), true);
       if (is_array($cached) && !empty($cached)) {
         $files = $cached;
@@ -72,9 +37,9 @@ if ( isset($config->iCloud) && isset($config->iCloud->enabled) && $config->iClou
 
     if (!empty($files)) {
         $target = $files[array_rand($files)];
-        if ($debug) {
+        if ($config->debug) {
             header('Content-type: application/json');
-            echo json_encode(["tv" => $tv, "count" => count($files), "target" => $target]);
+            echo json_encode(["tv" => $config->tv, "count" => count($files), "target" => $target]);
         } else {
             header("Location: $target", true, 302);
         }
@@ -256,7 +221,7 @@ if ( isset($config->GoogleDrive) && isset($config->GoogleDrive->enabled) && $con
           'fields' => 'files(id, name, mimeType)',
       ]);
       $files = $results->getFiles();
-      if ( $debug ) {  // show the list of eligible files instead
+      if ( $config->debug ) {  // show the list of eligible files instead
         header("HTTP/1.1 200 OK");
         header('Content-type: text/json');
         echo json_encode(array_values($files)); // Encode the file listing as JSON
@@ -328,7 +293,7 @@ if ( is_dir($directory) ) {  // get a list of media files from the art directory
     if ( !empty($type) && in_array(substr($type,0,5),array('image','video')) ) $files []= $file;
   }
 
-  if ( $debug ) {  // if requested as a list, show the data
+  if ( $config->debug ) {  // if requested as a list, show the data
     header("HTTP/1.1 200 OK");
     header('Content-type: text/json');
     echo json_encode(array_values($files)); // Encode the file listing as JSON
@@ -362,9 +327,7 @@ function getArt ( $directory ) {
 }
 
 
-
-
-
+// render out the next file
 function outputFile ( $file ) {
   header("HTTP/1.1 200 OK");
   header('Content-type: '.mime_content_type($file));
@@ -390,4 +353,53 @@ function outputFile ( $file ) {
   }
   fclose($handle);
   exit();
+}
+
+
+// load the configuration
+function loadConfiguration ( $tv ) {
+  $configFile = 'art/config.json';
+  $config = null;
+
+  if ( file_exists($configFile) ) {
+    $json = file_get_contents($configFile);
+    if ( $json !== false ) {
+      $config = json_decode($json);
+      if ( json_last_error() !== JSON_ERROR_NONE ) {
+        error_log("Configuration file is not valid JSON: $configFile ".json_last_error_msg());
+        return;
+      }
+    } else {
+      error_log("Failed to read config file: $configFile");
+      return;
+    }
+
+    // process overrides, if they exist
+    $config->tv = null;
+    if ( $tv ) {
+      $tvKey = "TV$tv";
+      if ( isset($config->$tvKey) ) {
+        $overrides = $config->$tvKey;
+        foreach (get_object_vars($overrides) as $key => $value) {
+          $config->$key = $value; // This overrides the base setting with the TV-specific one
+        }
+        $config->tv = $tv;
+      }
+    }
+
+    // process values
+    $config->debug = ( isset($_GET['debug']) ) ? true : false;
+    $config->cache = '/tmp/artv-cache';
+    $config->cacheLength = 60*5;  // in seconds
+
+    // set the timezone
+    $tz = (isset($config->timezone) && !empty($config->timezone)) ? $config->timezone : date_default_timezone_get();
+    try {
+        date_default_timezone_set($tz);
+    } catch (Exception $e) {
+        date_default_timezone_set(date_default_timezone_get());
+    }
+  }
+
+  return $config;
 }
