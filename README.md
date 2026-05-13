@@ -157,7 +157,7 @@ You can change some of the configuration with a simple JSON file located at "art
       "enabled" : true,
       "serviceAccountFile" : "PATH TO FILE",
       "folderID" : "GOOGLE DRIVE FOLDER ID FROM URL"
-    },
+    }
   }
 }
 ```
