@@ -1,5 +1,5 @@
 var screenid, rotationSpeed = 60, rotationInterval, imageFit = 'contain', debug = false;
-var showClock = false, blanking = false, clockInterval;
+var showClock = false, blanking = false, isBlanked = false, clockInterval;
 
 
 // Wait for the DOM to be ready before starting
@@ -98,38 +98,39 @@ async function loadConfiguration() {
 
 
 async function rotate() {
-    // 1. Find the active pane, with a fallback to 'one' if none is active yet
-    let offPane = document.querySelector('.pane.active');
+  if ( isBlanked ) return;
+  // 1. Find the active pane, with a fallback to 'one' if none is active yet
+  let offPane = document.querySelector('.pane.active');
 
-    // If somehow no pane is active, default to #one so the script doesn't crash
-    if (!offPane) {
-        offPane = document.getElementById('one');
+  // If somehow no pane is active, default to #one so the script doesn't crash
+  if (!offPane) {
+    offPane = document.getElementById('one');
+  }
+
+  const onPane = document.getElementById(offPane.id === 'one' ? 'two' : 'one');
+
+  const mediaUrl = `api.php?screen=${screenid}&cb=${Date.now()}`;
+
+  try {
+    const response = await fetch(mediaUrl);
+    const blob = await response.blob();
+    const contentType = response.headers.get('Content-Type');
+    const blobUrl = URL.createObjectURL(blob);
+
+    if (contentType.startsWith('image/')) {
+      onPane.innerHTML = `<img class="${imageFit}" src="${blobUrl}">`;
+      onPane.querySelector('img').onload = () => performSwap(onPane, offPane);
+    } else if (contentType.startsWith('video/')) {
+      onPane.innerHTML = `<video muted loop src="${blobUrl}"></video>`;
+      const video = onPane.querySelector('video');
+      video.onloadeddata = () => {
+        video.play();
+        performSwap(onPane, offPane);
+      };
     }
-
-    const onPane = document.getElementById(offPane.id === 'one' ? 'two' : 'one');
-
-    const mediaUrl = `api.php?screen=${screenid}&cb=${Date.now()}`;
-
-    try {
-        const response = await fetch(mediaUrl);
-        const blob = await response.blob();
-        const contentType = response.headers.get('Content-Type');
-        const blobUrl = URL.createObjectURL(blob);
-
-        if (contentType.startsWith('image/')) {
-            onPane.innerHTML = `<img class="${imageFit}" src="${blobUrl}">`;
-            onPane.querySelector('img').onload = () => performSwap(onPane, offPane);
-        } else if (contentType.startsWith('video/')) {
-            onPane.innerHTML = `<video muted loop src="${blobUrl}"></video>`;
-            const video = onPane.querySelector('video');
-            video.onloadeddata = () => {
-                video.play();
-                performSwap(onPane, offPane);
-            };
-        }
-    } catch (err) {
-        console.error("Rotate failed", err);
-    }
+  } catch (err) {
+    console.error("Rotate failed", err);
+  }
 }
 
 function performSwap(on, off) {
@@ -177,19 +178,30 @@ function stringToTime ( string ) {
 
 
 function clockUpdate() {
-    const now = new Date();
-    const clock = document.getElementById('clock');
+  const now = new Date();
+  const clock = document.getElementById('clock');
 
-    let hours = now.getHours();
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12 || 12;
+  let hours = now.getHours();
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12 || 12;
 
-    clock.innerHTML = `${hours}:${minutes}<span class="ampm">${ampm}</span>`;
+  clock.innerHTML = `${hours}:${minutes}<span class="ampm">${ampm}</span>`;
 
-    if (blanking && now >= blanking.start && now < blanking.end) {
-        window.location.reload();
+  if (blanking) {
+    if (now >= blanking.start && now < blanking.end) {
+      if (!document.body.classList.contains('blanked')) document.body.classList.add('blanked');
+      document.querySelectorAll('.pane').forEach(pane => pane.innerHTML = '');
+      console.log("Entering blanking mode.");
+      isBlanked = true;
+    } else if (now >= blanking.end && document.body.classList.contains('blanked')) {
+      document.body.classList.remove('blanked');
+      console.log("Exiting blanking mode: resuming.");
+      isBlanked = false;
+      rotate(); // Immediately fetch new content
     }
+  }
+
 }
 
 
