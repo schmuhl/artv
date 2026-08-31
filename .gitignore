@@ -1,4 +1,5 @@
 .DS_Store
+*.psd
 art/*
 art/config.json
 !art/
