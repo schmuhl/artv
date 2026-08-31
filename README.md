@@ -4,7 +4,6 @@ Pronounced "Art TV", this a very simple slideshow script designed to be run on a
 - Place files in a web server directory on the Raspberry Pi
   - Requires PHP to get a listing of all the images
 - Drop your favorite art and photos into the "art" directory.
- - Any files ending in "-snow" will automatically get a falling snow animation. (E.g. photo-snow.jpg)
 - Connect Raspberry Pi to your TV
 - Run a browser and open up the page (e.g. http://localhost/artv/)
 - Enjoy!
@@ -54,7 +53,6 @@ The "art" folder holds all of the images that can be shown. Eligible images will
 - Images in the "art" folder will be shown randomly. This is the simplest approach.
 - Create folders for specific months: Images in these folders will only be shown randomly during those months. These folders look like "1" for January and "2" for February and so on.
 - Create folders for specific days: Images in these folders will only be shown on that specific day and will be the only images that show on that day. An example for Christmas would look like "12-25".
-- Images that end with "-snow" will automatically get a snow animation. For example "landscape-snow.jpg".
 
 
 ### Start arTV on reboot
@@ -146,11 +144,6 @@ You can change some of the configuration with a simple JSON file located at "art
   "iCloud" : {
     "enabled" : true,
     "url" : "https://www.icloud.com/sharedalbum/#ALBUM-ID-HERE"
-  },
-  "GoogleDrive" : {
-    "enabled" : false,
-    "serviceAccountFile" : "PATH TO FILE",
-    "folderID" : "GOOGLE DRIVE FOLDER ID FROM URL"
   },
   "Screen2" : {
     "GoogleDrive" : {

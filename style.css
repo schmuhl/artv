@@ -10,7 +10,7 @@ BODY DIV.pane {
   overflow: hidden;
   z-index: 1;
   opacity: 0; /* Hidden by default */
-  will-change: opactity;
+  will-change: opacity;
   visibility: hidden; /* Helps the browser ignore the inactive pane */
   transition: opacity 2s ease-in-out;
 }
@@ -19,14 +19,29 @@ BODY DIV.pane.active {
   z-index: 2;
   visibility: visible;
 }
-BODY DIV.pane IMG.cover { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
-BODY DIV.pane IMG.contain, BODY DIV.pane VIDEO { display: block; width: 100%; height: 100%; object-fit: contain; object-position: center; }
+BODY DIV.pane IMG.media,
+BODY DIV.pane VIDEO { display: block; position: relative; width: 100%; height: 100%; object-position: center; z-index: 2; }
+BODY DIV.pane IMG.media.cover { object-fit: cover; }
+BODY DIV.pane IMG.media.contain,
+BODY DIV.pane VIDEO { object-fit: contain; }
+BODY DIV.pane IMG.backdrop {
+  display: none;
+  position: absolute;
+  inset: -4%;
+  width: 108%;
+  height: 108%;
+  object-fit: cover;
+  object-position: center;
+  filter: blur(24px) brightness(0.45) saturate(0.85);
+  transform: scale(1.04);
+  z-index: 1;
+}
+BODY DIV.pane[data-fit="contain"] IMG.backdrop { display: block; }
 
 BODY DIV.pane.debug { opacity: 0.5; width: 70%; height: 70%; border: 5px solid white; }
 BODY DIV.pane.debug.active { opacity: 1; border: 5px solid green; }
 BODY DIV.pane.debug#two { left: 30%; top: 30%; }
 
-BODY DIV#snow { z-index: 10; }
 BODY DIV#fader { position: fixed; height: 100%; width: 100%; margin: 0; background: #111; z-index: 100; }
 BODY IMG#preload { display: none; }
 BODY IMG#preload.show { display: block; position: fixed; top: 0; right: 0; width: 100px; border: 5px solid #ffffff; margin: 1vw; box-shadow: 5px 5px 10px; }

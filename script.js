@@ -1,5 +1,6 @@
 var screenid, rotationSpeed = 60, rotationInterval, imageFit = 'contain', debug = false;
 var showClock = false, blanking = false, isBlanked = false, clockInterval;
+var configuredTimezone, isRotating = false;
 
 
 // Wait for the DOM to be ready before starting
@@ -12,7 +13,6 @@ async function startApp() {
     await loadConfiguration();
 
     const paneOne = document.getElementById('one');
-    const splashImg = paneOne.querySelector('img');
     const clock = document.getElementById('clock');
 
     // Initial Splash
@@ -26,6 +26,9 @@ async function startApp() {
         clock.style.display = 'block';
         clock.style.opacity = '0';
         setTimeout(() => clock.style.opacity = '1', 100);
+      }
+
+      if (showClock || blanking) {
         clockUpdate();
         clockInterval = setInterval(clockUpdate, 20000);
       }
@@ -47,8 +50,10 @@ async function startApp() {
         console.log("Toggling clock to "+!isVisible);
       } else if (e.key === 'f') {
         imageFit = (imageFit === 'cover') ? 'contain' : 'cover';
-        document.querySelectorAll('.pane img').forEach(img => {
-            img.className = imageFit;
+        document.querySelectorAll('.pane').forEach(pane => {
+            pane.dataset.fit = imageFit;
+            const img = pane.querySelector('img.media');
+            if (img) img.className = `media ${imageFit}`;
         });
         console.log("Toggling image fit to "+imageFit);
       }
@@ -60,7 +65,7 @@ async function loadConfiguration() {
   var path = 'art/config.json';
   const urlParams = new URLSearchParams(window.location.search);
   screenid = urlParams.get('screen');
-  const screenKey = "screen" + screenid;
+  const screenKey = "Screen" + screenid;
 
   try {
     const response = await fetch(path);
@@ -80,14 +85,15 @@ async function loadConfiguration() {
     if (data.rotationSpeed !== undefined) rotationSpeed = data.rotationSpeed;
     if (data.imageFit !== undefined) imageFit = data.imageFit;
     if (data.blanking !== undefined) blanking = data.blanking;
+    if (data.timezone !== undefined) configuredTimezone = data.timezone;
+
+    if (imageFit !== 'contain' && imageFit !== 'cover') imageFit = 'contain';
 
     // Process blanking times if they exist
     if (blanking && blanking.start && blanking.end) {
-      blanking.start = stringToTime(blanking.start);
-      blanking.end = stringToTime(blanking.end);
-      if (blanking.start > blanking.end) {
-        blanking.end.setDate(blanking.end.getDate() + 1);
-      }
+      blanking.start = stringToMinutes(blanking.start);
+      blanking.end = stringToMinutes(blanking.end);
+      if (blanking.start === null || blanking.end === null) blanking = false;
     }
 
     console.log("Configuration successfully loaded.");
@@ -98,7 +104,8 @@ async function loadConfiguration() {
 
 
 async function rotate() {
-  if ( isBlanked ) return;
+  if (isBlanked || isRotating) return;
+  isRotating = true;
   // 1. Find the active pane, with a fallback to 'one' if none is active yet
   let offPane = document.querySelector('.pane.active');
 
@@ -111,24 +118,55 @@ async function rotate() {
 
   const mediaUrl = `api.php?screen=${screenid}&cb=${Date.now()}`;
 
+  let blobUrl;
   try {
     const response = await fetch(mediaUrl);
+    if (!response.ok) throw new Error(`Media request failed with HTTP ${response.status}`);
+
+    const contentType = (response.headers.get('Content-Type') || '').split(';', 1)[0].toLowerCase();
+    if (!contentType.startsWith('image/') && !contentType.startsWith('video/')) {
+      throw new Error(`Unsupported media type: ${contentType || 'missing Content-Type'}`);
+    }
+
     const blob = await response.blob();
-    const contentType = response.headers.get('Content-Type');
-    const blobUrl = URL.createObjectURL(blob);
+    if (isBlanked) {
+      isRotating = false;
+      return;
+    }
+    blobUrl = URL.createObjectURL(blob);
+    clearPane(onPane);
+    onPane.dataset.blobUrl = blobUrl;
 
     if (contentType.startsWith('image/')) {
-      onPane.innerHTML = `<img class="${imageFit}" src="${blobUrl}">`;
-      onPane.querySelector('img').onload = () => performSwap(onPane, offPane);
+      onPane.dataset.fit = imageFit;
+      const backdrop = document.createElement('img');
+      backdrop.className = 'backdrop';
+      backdrop.alt = '';
+      backdrop.src = blobUrl;
+
+      const image = document.createElement('img');
+      image.className = `media ${imageFit}`;
+      image.alt = '';
+      image.onload = () => performSwap(onPane, offPane);
+      image.onerror = () => handleMediaError(onPane, blobUrl, new Error('Image failed to decode'));
+      image.src = blobUrl;
+      onPane.append(backdrop, image);
     } else if (contentType.startsWith('video/')) {
-      onPane.innerHTML = `<video muted loop src="${blobUrl}"></video>`;
-      const video = onPane.querySelector('video');
+      onPane.dataset.fit = 'contain';
+      const video = document.createElement('video');
+      video.muted = true;
+      video.loop = true;
+      video.src = blobUrl;
       video.onloadeddata = () => {
-        video.play();
+        video.play().catch(err => console.warn('Video autoplay failed', err));
         performSwap(onPane, offPane);
       };
+      video.onerror = () => handleMediaError(onPane, blobUrl, new Error('Video failed to decode'));
+      onPane.append(video);
     }
   } catch (err) {
+    if (blobUrl) URL.revokeObjectURL(blobUrl);
+    isRotating = false;
     console.error("Rotate failed", err);
   }
 }
@@ -140,17 +178,32 @@ function performSwap(on, off) {
     // Trigger crossfade immediately
     on.classList.add('active');
     off.classList.remove('active');
+    isRotating = false;
 
     // Cleanup old pane after fade completes
     setTimeout(() => {
         if (!off.classList.contains('active')) {
-            off.innerHTML = '';
+            clearPane(off);
         }
     }, 2200);
 }
 
+function handleMediaError(pane, blobUrl, error) {
+  if (pane.dataset.blobUrl === blobUrl) clearPane(pane);
+  isRotating = false;
+  console.error('Rotate failed', error);
+}
 
-function stringToTime ( string ) {
+function clearPane(pane) {
+  const blobUrl = pane.dataset.blobUrl;
+  pane.replaceChildren();
+  delete pane.dataset.fit;
+  delete pane.dataset.blobUrl;
+  if (blobUrl) URL.revokeObjectURL(blobUrl);
+}
+
+
+function stringToMinutes ( string ) {
   var timeRegex = /^(\d{1,2}):(\d{2})\s?(am|pm)$/i;
   var match = timeRegex.exec(string.trim());
   if (match) {
@@ -171,9 +224,7 @@ function stringToTime ( string ) {
   } else if (ampm === 'am' && hours === 12) {
     hours = 0;
   }
-  var givenTime = new Date();
-  givenTime.setHours(hours, minutes, 0, 0);
-  return givenTime;
+  return (hours * 60) + minutes;
 }
 
 
@@ -181,20 +232,34 @@ function clockUpdate() {
   const now = new Date();
   const clock = document.getElementById('clock');
 
-  let hours = now.getHours();
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  hours = hours % 12 || 12;
+  let parts;
+  try {
+    parts = clockParts(now, configuredTimezone);
+  } catch (error) {
+    console.warn(`Invalid timezone "${configuredTimezone}"; using the device timezone.`, error);
+    configuredTimezone = undefined;
+    parts = clockParts(now);
+  }
 
+  const value = type => parts.find(part => part.type === type)?.value || '';
+  const hours = value('hour');
+  const minutes = value('minute');
+  const ampm = value('dayPeriod');
   clock.innerHTML = `${hours}:${minutes}<span class="ampm">${ampm}</span>`;
 
   if (blanking) {
-    if (now >= blanking.start && now < blanking.end) {
+    const currentMinutes = timeInConfiguredTimezone(now);
+    const overnight = blanking.start > blanking.end;
+    const shouldBlank = overnight
+      ? currentMinutes >= blanking.start || currentMinutes < blanking.end
+      : currentMinutes >= blanking.start && currentMinutes < blanking.end;
+
+    if (shouldBlank) {
       if (!document.body.classList.contains('blanked')) document.body.classList.add('blanked');
-      document.querySelectorAll('.pane').forEach(pane => pane.innerHTML = '');
+      document.querySelectorAll('.pane').forEach(clearPane);
       console.log("Entering blanking mode.");
       isBlanked = true;
-    } else if (now >= blanking.end && document.body.classList.contains('blanked')) {
+    } else if (document.body.classList.contains('blanked')) {
       document.body.classList.remove('blanked');
       console.log("Exiting blanking mode: resuming.");
       isBlanked = false;
@@ -202,6 +267,22 @@ function clockUpdate() {
     }
   }
 
+}
+
+function clockParts(date, timeZone) {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour: 'numeric', minute: '2-digit', hour12: true
+  }).formatToParts(date);
+}
+
+function timeInConfiguredTimezone(date) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: configuredTimezone,
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+  }).formatToParts(date);
+  const value = type => Number(parts.find(part => part.type === type)?.value || 0);
+  return (value('hour') * 60) + value('minute');
 }
 
 
