@@ -1,296 +1,444 @@
-var screenid, rotationSpeed = 60, rotationInterval, imageFit = 'contain', debug = false;
-var showClock = false, blanking = false, isBlanked = false, clockInterval;
-var configuredTimezone, isRotating = false;
+var screenid = null;
+var rotationSpeed = 60;
+var rotationInterval = null;
+var imageFit = 'contain';
+var debug = false;
+var showClock = false;
+var blanking = false;
+var isBlanked = false;
+var clockInterval = null;
+var configuredTimezone = null;
+var isRotating = false;
+var mediaRequest = null;
 
+// Some older TV browsers do not expose console methods unless a debugger is open.
+if (!window.console) window.console = {};
+if (!window.console.log) window.console.log = function () {};
+if (!window.console.warn) window.console.warn = function () {};
+if (!window.console.error) window.console.error = function () {};
 
-// Wait for the DOM to be ready before starting
-document.addEventListener('DOMContentLoaded', () => {
-    startApp();
+document.addEventListener('DOMContentLoaded', function () {
+  loadConfiguration(startApp);
 });
 
+function startApp() {
+  var paneOne = document.getElementById('one');
+  var clock = document.getElementById('clock');
 
-async function startApp() {
-    await loadConfiguration();
+  addClass(paneOne, 'active');
 
-    const paneOne = document.getElementById('one');
-    const clock = document.getElementById('clock');
+  setTimeout(function () {
+    rotate();
+    rotationInterval = setInterval(rotate, rotationSpeed * 60 * 1000);
 
-    // Initial Splash
-    paneOne.classList.add('active');
+    if (showClock) {
+      clock.style.display = 'block';
+      clock.style.opacity = '0';
+      setTimeout(function () {
+        clock.style.opacity = '1';
+      }, 100);
+    }
 
-    setTimeout(() => {
-      rotate();
-      rotationInterval = setInterval(rotate, rotationSpeed * 60 * 1000);
+    if (showClock || blanking) {
+      clockUpdate();
+      clockInterval = setInterval(clockUpdate, 20000);
+    }
+  }, 4000);
 
-      if (showClock) {
-        clock.style.display = 'block';
-        clock.style.opacity = '0';
-        setTimeout(() => clock.style.opacity = '1', 100);
-      }
-
-      if (showClock || blanking) {
-        clockUpdate();
-        clockInterval = setInterval(clockUpdate, 20000);
-      }
-    }, 4000);
-
-    // Click to rotate
-    document.addEventListener('click', () => rotate());
-
-    // Hotkeys (Simplified Native version)
-    document.addEventListener('keyup', (e) => {
-      const panes = document.querySelectorAll('.pane');
-      if (e.key === 'd') {
-        debug = !debug;
-        console.log("Toggling debug to "+debug);
-        panes.forEach(p => p.classList.toggle('debug', debug));
-      } else if (e.key === 'c') {
-        const isVisible = clock.style.display !== 'none';
-        clock.style.display = isVisible ? 'none' : 'block';
-        console.log("Toggling clock to "+!isVisible);
-      } else if (e.key === 'f') {
-        imageFit = (imageFit === 'cover') ? 'contain' : 'cover';
-        document.querySelectorAll('.pane').forEach(pane => {
-            pane.dataset.fit = imageFit;
-            const img = pane.querySelector('img.media');
-            if (img) img.className = `media ${imageFit}`;
-        });
-        console.log("Toggling image fit to "+imageFit);
-      }
-    });
+  document.addEventListener('click', rotate);
+  document.addEventListener('keyup', handleKeyUp);
 }
 
+function handleKeyUp(event) {
+  var panes;
+  var i;
+  var image;
+  var isVisible;
 
-async function loadConfiguration() {
-  var path = 'art/config.json';
-  const urlParams = new URLSearchParams(window.location.search);
-  screenid = urlParams.get('screen');
-  const screenKey = "Screen" + screenid;
-
-  try {
-    const response = await fetch(path);
-    if (!response.ok) return; // Use defaults if file missing
-
-    let data = await response.json();
-
-    // look for configuration overrides for this screen
-    if ( screenid && data[screenKey]) {
-      console.log(`Applying configuration for screen ${screenid}`);
-      data = { ...data, ...data[screenKey] };
+  if (event.key === 'd' || event.keyCode === 68) {
+    debug = !debug;
+    panes = document.querySelectorAll('.pane');
+    for (i = 0; i < panes.length; i += 1) {
+      toggleClass(panes[i], 'debug', debug);
     }
-
-    // Map data to global variables
-    if (data.debug !== undefined) debug = data.debug;
-    if (data.showClock !== undefined) showClock = data.showClock;
-    if (data.rotationSpeed !== undefined) rotationSpeed = data.rotationSpeed;
-    if (data.imageFit !== undefined) imageFit = data.imageFit;
-    if (data.blanking !== undefined) blanking = data.blanking;
-    if (data.timezone !== undefined) configuredTimezone = data.timezone;
-
-    if (imageFit !== 'contain' && imageFit !== 'cover') imageFit = 'contain';
-
-    // Process blanking times if they exist
-    if (blanking && blanking.start && blanking.end) {
-      blanking.start = stringToMinutes(blanking.start);
-      blanking.end = stringToMinutes(blanking.end);
-      if (blanking.start === null || blanking.end === null) blanking = false;
+    console.log('Toggling debug to ' + debug);
+  } else if (event.key === 'c' || event.keyCode === 67) {
+    isVisible = document.getElementById('clock').style.display !== 'none';
+    document.getElementById('clock').style.display = isVisible ? 'none' : 'block';
+    console.log('Toggling clock to ' + !isVisible);
+  } else if (event.key === 'f' || event.keyCode === 70) {
+    imageFit = imageFit === 'cover' ? 'contain' : 'cover';
+    panes = document.querySelectorAll('.pane');
+    for (i = 0; i < panes.length; i += 1) {
+      panes[i].setAttribute('data-fit', imageFit);
+      image = panes[i].querySelector('img.media');
+      if (image) image.className = 'media ' + imageFit;
     }
-
-    console.log("Configuration successfully loaded.");
-  } catch (e) {
-    console.warn("Using default config due to error:", e);
+    console.log('Toggling image fit to ' + imageFit);
   }
 }
 
+function loadConfiguration(done) {
+  var request = new XMLHttpRequest();
+  var finished = false;
 
-async function rotate() {
+  screenid = getQueryParameter('screen');
+
+  function finish() {
+    if (finished) return;
+    finished = true;
+    done();
+  }
+
+  request.open('GET', 'art/config.json?cb=' + new Date().getTime(), true);
+  request.timeout = 10000;
+  request.onreadystatechange = function () {
+    var data;
+    if (request.readyState !== 4) return;
+
+    if (request.status >= 200 && request.status < 300) {
+      try {
+        data = JSON.parse(request.responseText);
+        applyConfiguration(data);
+        console.log('Configuration successfully loaded.');
+      } catch (error) {
+        console.warn('Using default config due to error:', error);
+      }
+    }
+    finish();
+  };
+  request.onerror = finish;
+  request.ontimeout = finish;
+
+  try {
+    request.send();
+  } catch (error) {
+    console.warn('Using default config due to error:', error);
+    finish();
+  }
+}
+
+function applyConfiguration(data) {
+  var screenKey = 'Screen' + screenid;
+  var overrides;
+  var key;
+
+  if (screenid && data[screenKey]) {
+    console.log('Applying configuration for screen ' + screenid);
+    overrides = data[screenKey];
+    for (key in overrides) {
+      if (Object.prototype.hasOwnProperty.call(overrides, key)) data[key] = overrides[key];
+    }
+  }
+
+  if (typeof data.debug !== 'undefined') debug = data.debug;
+  if (typeof data.showClock !== 'undefined') showClock = data.showClock;
+  if (typeof data.rotationSpeed !== 'undefined') rotationSpeed = Number(data.rotationSpeed);
+  if (typeof data.imageFit !== 'undefined') imageFit = data.imageFit;
+  if (typeof data.blanking !== 'undefined') blanking = data.blanking;
+  if (typeof data.timezone !== 'undefined') configuredTimezone = data.timezone;
+
+  if (!isFinite(rotationSpeed) || rotationSpeed <= 0) rotationSpeed = 60;
+  if (imageFit !== 'contain' && imageFit !== 'cover') imageFit = 'contain';
+
+  if (blanking && blanking.start && blanking.end) {
+    blanking.start = stringToMinutes(blanking.start);
+    blanking.end = stringToMinutes(blanking.end);
+    if (blanking.start === null || blanking.end === null) blanking = false;
+  }
+}
+
+function rotate() {
+  var offPane;
+  var onPane;
+  var mediaUrl;
+  var request;
+
   if (isBlanked || isRotating) return;
   isRotating = true;
-  // 1. Find the active pane, with a fallback to 'one' if none is active yet
-  let offPane = document.querySelector('.pane.active');
 
-  // If somehow no pane is active, default to #one so the script doesn't crash
-  if (!offPane) {
-    offPane = document.getElementById('one');
+  offPane = document.querySelector('.pane.active');
+  if (!offPane) offPane = document.getElementById('one');
+  onPane = document.getElementById(offPane.id === 'one' ? 'two' : 'one');
+
+  mediaUrl = 'api.php?screen=' + encodeURIComponent(screenid || '') + '&cb=' + new Date().getTime();
+  request = new XMLHttpRequest();
+  mediaRequest = request;
+  request.open('GET', mediaUrl, true);
+  request.timeout = 30000;
+
+  try {
+    request.responseType = 'blob';
+  } catch (error) {
+    finishRotationError('This browser does not support binary media responses.');
+    return;
   }
 
-  const onPane = document.getElementById(offPane.id === 'one' ? 'two' : 'one');
+  request.onload = function () {
+    var contentType;
+    var blobUrl;
 
-  const mediaUrl = `api.php?screen=${screenid}&cb=${Date.now()}`;
-
-  let blobUrl;
-  try {
-    const response = await fetch(mediaUrl);
-    if (!response.ok) throw new Error(`Media request failed with HTTP ${response.status}`);
-
-    const contentType = (response.headers.get('Content-Type') || '').split(';', 1)[0].toLowerCase();
-    if (!contentType.startsWith('image/') && !contentType.startsWith('video/')) {
-      throw new Error(`Unsupported media type: ${contentType || 'missing Content-Type'}`);
-    }
-
-    const blob = await response.blob();
-    if (isBlanked) {
-      isRotating = false;
+    if (request.status < 200 || request.status >= 300) {
+      finishRotationError('Media request failed with HTTP ' + request.status);
       return;
     }
-    blobUrl = URL.createObjectURL(blob);
-    clearPane(onPane);
-    onPane.dataset.blobUrl = blobUrl;
 
-    if (contentType.startsWith('image/')) {
-      onPane.dataset.fit = imageFit;
-      const backdrop = document.createElement('img');
-      backdrop.className = 'backdrop';
-      backdrop.alt = '';
-      backdrop.src = blobUrl;
-
-      const image = document.createElement('img');
-      image.className = `media ${imageFit}`;
-      image.alt = '';
-      image.onload = () => performSwap(onPane, offPane);
-      image.onerror = () => handleMediaError(onPane, blobUrl, new Error('Image failed to decode'));
-      image.src = blobUrl;
-      onPane.append(backdrop, image);
-    } else if (contentType.startsWith('video/')) {
-      onPane.dataset.fit = 'contain';
-      const video = document.createElement('video');
-      video.muted = true;
-      video.loop = true;
-      video.src = blobUrl;
-      video.onloadeddata = () => {
-        video.play().catch(err => console.warn('Video autoplay failed', err));
-        performSwap(onPane, offPane);
-      };
-      video.onerror = () => handleMediaError(onPane, blobUrl, new Error('Video failed to decode'));
-      onPane.append(video);
+    contentType = (request.getResponseHeader('Content-Type') || '').split(';')[0].toLowerCase();
+    if (contentType.indexOf('image/') !== 0 && contentType.indexOf('video/') !== 0) {
+      finishRotationError('Unsupported media type: ' + (contentType || 'missing Content-Type'));
+      return;
     }
-  } catch (err) {
-    if (blobUrl) URL.revokeObjectURL(blobUrl);
+
+    if (isBlanked) {
+      isRotating = false;
+      mediaRequest = null;
+      return;
+    }
+
+    blobUrl = createBlobUrl(request.response);
+    if (!blobUrl) {
+      finishRotationError('This browser cannot create a media URL.');
+      return;
+    }
+
+    clearPane(onPane);
+    onPane.setAttribute('data-blob-url', blobUrl);
+
+    if (contentType.indexOf('image/') === 0) prepareImage(onPane, offPane, blobUrl);
+    else prepareVideo(onPane, offPane, blobUrl);
+  };
+
+  request.onerror = function () {
+    finishRotationError('Media request failed.');
+  };
+  request.ontimeout = function () {
+    finishRotationError('Media request timed out.');
+  };
+  request.onabort = function () {
     isRotating = false;
-    console.error("Rotate failed", err);
+    mediaRequest = null;
+  };
+
+  try {
+    request.send();
+  } catch (error) {
+    finishRotationError(error.message || 'Media request failed.');
   }
 }
 
-function performSwap(on, off) {
-    // Make sure new pane starts visible to the browser
-    on.style.visibility = 'visible';
+function prepareImage(onPane, offPane, blobUrl) {
+  var backdrop = document.createElement('img');
+  var image = document.createElement('img');
 
-    // Trigger crossfade immediately
-    on.classList.add('active');
-    off.classList.remove('active');
-    isRotating = false;
+  onPane.setAttribute('data-fit', imageFit);
+  backdrop.className = 'backdrop';
+  backdrop.alt = '';
+  backdrop.src = blobUrl;
 
-    // Cleanup old pane after fade completes
-    setTimeout(() => {
-        if (!off.classList.contains('active')) {
-            clearPane(off);
-        }
-    }, 2200);
+  image.className = 'media ' + imageFit;
+  image.alt = '';
+  image.onload = function () {
+    performSwap(onPane, offPane);
+  };
+  image.onerror = function () {
+    handleMediaError(onPane, blobUrl, 'Image failed to decode.');
+  };
+  image.src = blobUrl;
+
+  onPane.appendChild(backdrop);
+  onPane.appendChild(image);
 }
 
-function handleMediaError(pane, blobUrl, error) {
-  if (pane.dataset.blobUrl === blobUrl) clearPane(pane);
+function prepareVideo(onPane, offPane, blobUrl) {
+  var video = document.createElement('video');
+
+  onPane.setAttribute('data-fit', 'contain');
+  video.muted = true;
+  video.loop = true;
+  video.setAttribute('playsinline', '');
+  video.onloadeddata = function () {
+    try {
+      video.play();
+    } catch (error) {
+      console.warn('Video autoplay failed:', error);
+    }
+    performSwap(onPane, offPane);
+  };
+  video.onerror = function () {
+    handleMediaError(onPane, blobUrl, 'Video failed to decode.');
+  };
+  video.src = blobUrl;
+  onPane.appendChild(video);
+}
+
+function performSwap(onPane, offPane) {
+  onPane.style.visibility = 'visible';
+  addClass(onPane, 'active');
+  removeClass(offPane, 'active');
   isRotating = false;
-  console.error('Rotate failed', error);
+  mediaRequest = null;
+
+  setTimeout(function () {
+    if (!hasClass(offPane, 'active')) clearPane(offPane);
+  }, 2200);
+}
+
+function handleMediaError(pane, blobUrl, message) {
+  if (pane.getAttribute('data-blob-url') === blobUrl) clearPane(pane);
+  finishRotationError(message);
+}
+
+function finishRotationError(message) {
+  isRotating = false;
+  mediaRequest = null;
+  console.error('Rotate failed: ' + message);
 }
 
 function clearPane(pane) {
-  const blobUrl = pane.dataset.blobUrl;
-  pane.replaceChildren();
-  delete pane.dataset.fit;
-  delete pane.dataset.blobUrl;
-  if (blobUrl) URL.revokeObjectURL(blobUrl);
+  var blobUrl = pane.getAttribute('data-blob-url');
+  var video = pane.querySelector('video');
+
+  if (video) {
+    try {
+      video.pause();
+    } catch (error) {
+      // Ignore browsers that cannot pause an unloaded video.
+    }
+  }
+
+  while (pane.firstChild) pane.removeChild(pane.firstChild);
+  pane.removeAttribute('data-fit');
+  pane.removeAttribute('data-blob-url');
+  if (blobUrl) revokeBlobUrl(blobUrl);
 }
 
+function createBlobUrl(blob) {
+  var urlApi = window.URL || window.webkitURL;
+  return urlApi && urlApi.createObjectURL ? urlApi.createObjectURL(blob) : null;
+}
 
-function stringToMinutes ( string ) {
-  var timeRegex = /^(\d{1,2}):(\d{2})\s?(am|pm)$/i;
-  var match = timeRegex.exec(string.trim());
-  if (match) {
-    var hours = parseInt(match[1], 10);
-    var minutes = parseInt(match[2], 10);
-    var ampm = match[3].toLowerCase();
-    if (isNaN(hours) || isNaN(minutes) || hours < 1 || hours > 12 || minutes < 0 || minutes > 59) {
-      console.warn(`Time string "${string}" has invalid hour or minute values: .`);
-      return null;
-    }
-  } else {
-    console.warn(`Time string "${string}" is not in the expected "h:mm am/pm" format.`);
+function revokeBlobUrl(blobUrl) {
+  var urlApi = window.URL || window.webkitURL;
+  if (urlApi && urlApi.revokeObjectURL) urlApi.revokeObjectURL(blobUrl);
+}
+
+function stringToMinutes(value) {
+  var match = /^(\d{1,2}):(\d{2})\s?(am|pm)$/i.exec(String(value).replace(/^\s+|\s+$/g, ''));
+  var hours;
+  var minutes;
+  var ampm;
+
+  if (!match) {
+    console.warn('Time string "' + value + '" is not in the expected "h:mm am/pm" format.');
     return null;
   }
-  // Adjust hours for 24-hour format
-  if (ampm === 'pm' && hours !== 12) {
-    hours += 12;
-  } else if (ampm === 'am' && hours === 12) {
-    hours = 0;
-  }
+
+  hours = parseInt(match[1], 10);
+  minutes = parseInt(match[2], 10);
+  ampm = match[3].toLowerCase();
+  if (hours < 1 || hours > 12 || minutes < 0 || minutes > 59) return null;
+  if (ampm === 'pm' && hours !== 12) hours += 12;
+  if (ampm === 'am' && hours === 12) hours = 0;
   return (hours * 60) + minutes;
 }
 
-
 function clockUpdate() {
-  const now = new Date();
-  const clock = document.getElementById('clock');
+  var now = new Date();
+  var clock = document.getElementById('clock');
+  var time = getTimeParts(now);
+  var displayHours = time.hours % 12 || 12;
+  var ampm = time.hours >= 12 ? 'PM' : 'AM';
+  var currentMinutes;
+  var overnight;
+  var shouldBlank;
+  var panes;
+  var i;
 
-  let parts;
-  try {
-    parts = clockParts(now, configuredTimezone);
-  } catch (error) {
-    console.warn(`Invalid timezone "${configuredTimezone}"; using the device timezone.`, error);
-    configuredTimezone = undefined;
-    parts = clockParts(now);
+  clock.innerHTML = displayHours + ':' + padTwo(time.minutes) + '<span class="ampm">' + ampm + '</span>';
+
+  if (!blanking) return;
+
+  currentMinutes = (time.hours * 60) + time.minutes;
+  overnight = blanking.start > blanking.end;
+  shouldBlank = overnight
+    ? currentMinutes >= blanking.start || currentMinutes < blanking.end
+    : currentMinutes >= blanking.start && currentMinutes < blanking.end;
+
+  if (shouldBlank && !isBlanked) {
+    addClass(document.body, 'blanked');
+    isBlanked = true;
+    if (mediaRequest) mediaRequest.abort();
+    panes = document.querySelectorAll('.pane');
+    for (i = 0; i < panes.length; i += 1) clearPane(panes[i]);
+    console.log('Entering blanking mode.');
+  } else if (!shouldBlank && isBlanked) {
+    removeClass(document.body, 'blanked');
+    isBlanked = false;
+    console.log('Exiting blanking mode: resuming.');
+    rotate();
   }
+}
 
-  const value = type => parts.find(part => part.type === type)?.value || '';
-  const hours = value('hour');
-  const minutes = value('minute');
-  const ampm = value('dayPeriod');
-  clock.innerHTML = `${hours}:${minutes}<span class="ampm">${ampm}</span>`;
+function getTimeParts(date) {
+  var formatter;
+  var formatted;
+  var match;
+  var hours;
 
-  if (blanking) {
-    const currentMinutes = timeInConfiguredTimezone(now);
-    const overnight = blanking.start > blanking.end;
-    const shouldBlank = overnight
-      ? currentMinutes >= blanking.start || currentMinutes < blanking.end
-      : currentMinutes >= blanking.start && currentMinutes < blanking.end;
-
-    if (shouldBlank) {
-      if (!document.body.classList.contains('blanked')) document.body.classList.add('blanked');
-      document.querySelectorAll('.pane').forEach(clearPane);
-      console.log("Entering blanking mode.");
-      isBlanked = true;
-    } else if (document.body.classList.contains('blanked')) {
-      document.body.classList.remove('blanked');
-      console.log("Exiting blanking mode: resuming.");
-      isBlanked = false;
-      rotate(); // Immediately fetch new content
+  if (configuredTimezone && window.Intl && Intl.DateTimeFormat) {
+    try {
+      formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: configuredTimezone,
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+      formatted = formatter.format(date);
+      match = /(\d{1,2}):(\d{2})/.exec(formatted);
+      if (match) {
+        hours = parseInt(match[1], 10) % 24;
+        return { hours: hours, minutes: parseInt(match[2], 10) };
+      }
+    } catch (error) {
+      console.warn('Invalid or unsupported timezone "' + configuredTimezone + '"; using TV timezone.');
+      configuredTimezone = null;
     }
   }
 
+  return { hours: date.getHours(), minutes: date.getMinutes() };
 }
 
-function clockParts(date, timeZone) {
-  return new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    hour: 'numeric', minute: '2-digit', hour12: true
-  }).formatToParts(date);
-}
-
-function timeInConfiguredTimezone(date) {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: configuredTimezone,
-    hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
-  }).formatToParts(date);
-  const value = type => Number(parts.find(part => part.type === type)?.value || 0);
-  return (value('hour') * 60) + value('minute');
-}
-
-
-async function fileExists(filename) {
-  try {
-    const response = await fetch(filename, { method: 'HEAD' });
-    return response.ok; // Returns true if status is 200-299
-  } catch (error) {
-    return false; // Network error or file doesn't exist
+function getQueryParameter(name) {
+  var query = window.location.search.substring(1).split('&');
+  var i;
+  var pair;
+  for (i = 0; i < query.length; i += 1) {
+    pair = query[i].split('=');
+    if (decodeURIComponent(pair[0] || '') === name) {
+      return decodeURIComponent((pair[1] || '').replace(/\+/g, ' '));
+    }
   }
+  return null;
+}
+
+function padTwo(value) {
+  return value < 10 ? '0' + value : String(value);
+}
+
+function hasClass(element, className) {
+  return new RegExp('(^|\\s)' + className + '(\\s|$)').test(element.className);
+}
+
+function addClass(element, className) {
+  if (!hasClass(element, className)) element.className += (element.className ? ' ' : '') + className;
+}
+
+function removeClass(element, className) {
+  var expression = new RegExp('(^|\\s)' + className + '(?=\\s|$)', 'g');
+  element.className = element.className.replace(expression, ' ').replace(/^\s+|\s+$/g, '').replace(/\s+/g, ' ');
+}
+
+function toggleClass(element, className, enabled) {
+  if (enabled) addClass(element, className);
+  else removeClass(element, className);
 }

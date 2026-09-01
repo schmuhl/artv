@@ -12,6 +12,7 @@ BODY DIV.pane {
   opacity: 0; /* Hidden by default */
   will-change: opacity;
   visibility: hidden; /* Helps the browser ignore the inactive pane */
+  -webkit-transition: opacity 2s ease-in-out;
   transition: opacity 2s ease-in-out;
 }
 BODY DIV.pane.active {
@@ -27,12 +28,15 @@ BODY DIV.pane VIDEO { object-fit: contain; }
 BODY DIV.pane IMG.backdrop {
   display: none;
   position: absolute;
-  inset: -4%;
+  top: -4%;
+  left: -4%;
   width: 108%;
   height: 108%;
   object-fit: cover;
   object-position: center;
+  -webkit-filter: blur(24px) brightness(0.45) saturate(0.85);
   filter: blur(24px) brightness(0.45) saturate(0.85);
+  -webkit-transform: scale(1.04);
   transform: scale(1.04);
   z-index: 1;
 }
